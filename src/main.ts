@@ -8,6 +8,7 @@ import {
   canBuildShrine,
   canFeedShrine,
   canUpgradeHut,
+  canUpgradeQuarry,
   createProductionAcc,
   feedShrine,
   tapGain,
@@ -15,6 +16,7 @@ import {
   tapTree,
   tickProduction,
   upgradeHut,
+  upgradeQuarry,
 } from './game/economy';
 import {
   FLASH_MS,
@@ -33,7 +35,7 @@ import {
 import { bindInput } from './game/input';
 import { computeLayout, type Layout } from './game/layers';
 import { startLoop } from './game/loop';
-import { skipRelic1 } from './game/qa';
+import { skipRelic1, skipRelic2 } from './game/qa';
 import {
   attachViewportListeners,
   drawScene,
@@ -81,6 +83,8 @@ let hutPulse: TimedFx | null = null;
 let islandSettle: TimedFx | null = null;
 let shrineBuild: TimedFx | null = null;
 let relicBeat: TimedFx | null = null;
+let relic2Beat: TimedFx | null = null;
+let quarryPulse: TimedFx | null = null;
 
 const saver = startSaveScheduler({
   getState: () => state,
@@ -93,6 +97,7 @@ function hasActivePlot(): boolean {
     canBuildQuarry(state) ||
     canUpgradeHut(state) ||
     canBuildShrine(state) ||
+    canUpgradeQuarry(state) ||
     canFeedShrine(state)
   );
 }
@@ -123,6 +128,8 @@ function paint(): void {
     islandSettle,
     shrineBuild,
     relicBeat,
+    relic2Beat,
+    quarryPulse,
     timeMs: performance.now(),
   });
 }
@@ -138,6 +145,8 @@ function resetFx(): void {
   islandSettle = null;
   shrineBuild = null;
   relicBeat = null;
+  relic2Beat = null;
+  quarryPulse = null;
 }
 
 function resetSave(): void {
@@ -161,8 +170,18 @@ function applySkipRelic1(): void {
   paint();
 }
 
+function applySkipRelic2(): void {
+  skipRelic2(state);
+  prodAcc = createProductionAcc();
+  resetFx();
+  hud.setHint(null);
+  saver.flush();
+  hud.render(state);
+  paint();
+}
+
 bindVersionHold(hud.versionEl, () => {
-  openQaMenu({ onReset: resetSave, onSkipRelic1: applySkipRelic1 });
+  openQaMenu({ onReset: resetSave, onSkipRelic1: applySkipRelic1, onSkipRelic2: applySkipRelic2 });
 });
 
 bindInput(gameCanvas, () => ({ layout, view: stageView }), {
@@ -221,7 +240,18 @@ bindInput(gameCanvas, () => ({ layout, view: stageView }), {
       flash = { kind: 'plot', remaining: FLASH_MS };
       plotPulse = 0;
       hutPulse = { elapsed: 0 };
-      prodAcc.hutMs = 0;
+      if (state.hutLevel === 2) {
+        prodAcc.hutMs = 0;
+      }
+      hud.setHint(null);
+      saver.flush();
+      hud.render(state);
+      return;
+    }
+    if (canUpgradeQuarry(state) && upgradeQuarry(state)) {
+      flash = { kind: 'plot', remaining: FLASH_MS };
+      plotPulse = 0;
+      quarryPulse = { elapsed: 0 };
       hud.setHint(null);
       saver.flush();
       hud.render(state);
@@ -241,7 +271,9 @@ bindInput(gameCanvas, () => ({ layout, view: stageView }), {
       flash = { kind: 'plot', remaining: FLASH_MS };
       plotPulse = 0;
       hud.setHint(null);
-      if (state.relic1) {
+      if (state.relic2) {
+        relic2Beat = { elapsed: 0 };
+      } else if (state.relic1 && state.shrineFeeds === 6) {
         relicBeat = { elapsed: 0 };
       }
       saver.flush();
@@ -256,7 +288,7 @@ startLoop({
     const gained = tickProduction(state, prodAcc, dt);
     if (gained.wood > 0) {
       floats.push({
-        text: '+1 Holz',
+        text: `+${gained.wood} Holz`,
         x: layout.hut.x + layout.hut.w / 2,
         y: layout.hut.y + 8,
         elapsed: 0,
@@ -265,7 +297,7 @@ startLoop({
     }
     if (gained.stone > 0) {
       floats.push({
-        text: '+1 Stein',
+        text: `+${gained.stone} Stein`,
         x: layout.quarry.x + layout.quarry.w / 2,
         y: layout.quarry.y + 6,
         elapsed: 0,
@@ -325,6 +357,18 @@ startLoop({
       relicBeat.elapsed += dt;
       if (relicBeat.elapsed >= RELIC_BEAT_MS) {
         relicBeat = null;
+      }
+    }
+    if (relic2Beat) {
+      relic2Beat.elapsed += dt;
+      if (relic2Beat.elapsed >= RELIC_BEAT_MS) {
+        relic2Beat = null;
+      }
+    }
+    if (quarryPulse) {
+      quarryPulse.elapsed += dt;
+      if (quarryPulse.elapsed >= HUT_PULSE_MS) {
+        quarryPulse = null;
       }
     }
     if (hintUntil && performance.now() > hintUntil) {

@@ -109,21 +109,46 @@ describe('save', () => {
     expect(restored.hutLevel).toBe(3);
   });
 
-  it('clamps shrineFeeds to 0–6', () => {
+  it('v3 roundtrip preserves relic2 and hut/quarry level 3', () => {
+    const state = createInitialState();
+    state.wood = 11;
+    state.stone = 9;
+    state.hutLevel = 3;
+    state.quarryLevel = 3;
+    state.shrineBuilt = true;
+    state.shrineFeeds = 14;
+    state.relic1 = true;
+    state.relic2 = true;
+    const blob = serializeState(state, 1_700_000_000_000);
+    expect(blob.schemaVersion).toBe(3);
+    expect(parseSave(blob)).toEqual({
+      wood: 11,
+      stone: 9,
+      hutLevel: 3,
+      quarryLevel: 3,
+      shrineBuilt: true,
+      shrineFeeds: 14,
+      relic1: true,
+      relic2: true,
+    });
+  });
+
+  it('clamps shrineFeeds to 0–14', () => {
     const high = parseSave({
       schemaVersion: 3,
       wood: 0,
       stone: 0,
-      hutLevel: 2,
-      quarryLevel: 1,
+      hutLevel: 3,
+      quarryLevel: 3,
       shrineBuilt: true,
       shrineFeeds: 99,
       relic1: false,
       relic2: false,
       updatedAt: 1,
     });
-    expect(high.shrineFeeds).toBe(6);
+    expect(high.shrineFeeds).toBe(14);
     expect(high.relic1).toBe(true);
+    expect(high.relic2).toBe(true);
     expect(high.shrineBuilt).toBe(true);
 
     const low = parseSave({

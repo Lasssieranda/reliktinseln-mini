@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeLayout, HUT_RECT, QUARRY_RECT, RELIC_RECT, SHRINE_RECT } from './layers';
+import { computeLayout, HUT_RECT, QUARRY_RECT, RELIC_RECT, RELIC2_RECT, SHRINE_RECT } from './layers';
 import { canvasCssToStage, computeStageView, STAGE_H, STAGE_W } from './view';
 
 describe('stage view', () => {
@@ -82,5 +82,49 @@ describe('stage layout', () => {
     expect(upgrade.plot.x + upgrade.plot.w / 2).toBeCloseTo(HUT_RECT.x + HUT_RECT.w / 2);
     expect(computeLayout({ hutLevel: 2, quarryLevel: 1, shrineBuilt: false }).plot).toEqual(SHRINE_RECT);
     expect(computeLayout({ hutLevel: 2, quarryLevel: 1, shrineBuilt: true, relic1: false }).plot).toEqual(SHRINE_RECT);
+  });
+
+  it('places relic2 to the right of relic1 with hits at least 48px', () => {
+    const layout = computeLayout({
+      hutLevel: 3,
+      quarryLevel: 3,
+      shrineBuilt: true,
+      relic1: true,
+      relic2: true,
+    });
+    expect(layout.relic).toEqual(RELIC_RECT);
+    expect(layout.relic2).toEqual(RELIC2_RECT);
+    expect(layout.relic2.x).toBeGreaterThan(layout.relic.x);
+    expect(layout.relic2.w).toBeGreaterThanOrEqual(48);
+    expect(layout.relic2.h).toBeGreaterThanOrEqual(48);
+  });
+
+  it('expands hut and quarry hitboxes for L3 around the same center', () => {
+    const hutL2 = computeLayout({ hutLevel: 2 });
+    const hutL3 = computeLayout({ hutLevel: 3 });
+    expect(hutL3.hut.w).toBeGreaterThan(hutL2.hut.w);
+    expect(hutL3.hut.h).toBeGreaterThan(hutL2.hut.h);
+    expect(hutL3.hut.w).toBeGreaterThanOrEqual(48);
+    expect(hutL3.hut.x + hutL3.hut.w / 2).toBeCloseTo(hutL2.hut.x + hutL2.hut.w / 2);
+
+    const qL1 = computeLayout({ quarryLevel: 1 });
+    const qL2 = computeLayout({ quarryLevel: 2 });
+    const qL3 = computeLayout({ quarryLevel: 3 });
+    expect(qL2.quarry.w).toBeGreaterThan(qL1.quarry.w);
+    expect(qL3.quarry.w).toBeGreaterThan(qL2.quarry.w);
+    expect(qL3.quarry.w).toBeGreaterThanOrEqual(48);
+    expect(qL3.quarry.x + qL3.quarry.w / 2).toBeCloseTo(qL1.quarry.x + qL1.quarry.w / 2);
+  });
+
+  it('picks stufe3 plots quarry L2 → hut L3 → quarry L3 then shrine for relic2', () => {
+    const q2 = computeLayout({ hutLevel: 2, quarryLevel: 1, shrineBuilt: true, relic1: true });
+    expect(q2.plot.x + q2.plot.w / 2).toBeCloseTo(QUARRY_RECT.x + QUARRY_RECT.w / 2);
+    const h3 = computeLayout({ hutLevel: 2, quarryLevel: 2, shrineBuilt: true, relic1: true });
+    expect(h3.plot.x + h3.plot.w / 2).toBeCloseTo(HUT_RECT.x + HUT_RECT.w / 2);
+    const q3 = computeLayout({ hutLevel: 3, quarryLevel: 2, shrineBuilt: true, relic1: true });
+    expect(q3.plot.x + q3.plot.w / 2).toBeCloseTo(QUARRY_RECT.x + QUARRY_RECT.w / 2);
+    expect(
+      computeLayout({ hutLevel: 3, quarryLevel: 3, shrineBuilt: true, relic1: true, relic2: false }).plot,
+    ).toEqual(SHRINE_RECT);
   });
 
