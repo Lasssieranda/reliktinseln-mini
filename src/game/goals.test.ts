@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildHut, buildQuarry, upgradeHut } from './economy';
+import { buildHut, buildQuarry, buildShrine, feedShrine, upgradeHut } from './economy';
 import {
   currentMiniGoal,
   isHutGoalFulfilled,
   isHutL2GoalFulfilled,
   isQuarryGoalFulfilled,
+  isRelic1GoalFulfilled,
+  isShrineGoalFulfilled,
 } from './goals';
 import { createInitialState } from './state';
 
@@ -20,7 +22,7 @@ describe('goals', () => {
     expect(currentMiniGoal(state)).toBe('quarry');
   });
 
-  it('goal list is quarry then hut tier 2 after hut', () => {
+  it('goal list is quarry then hut L2 then shrine then relic1 then done', () => {
     const state = createInitialState();
     state.hutLevel = 1;
     expect(isHutGoalFulfilled(state)).toBe(true);
@@ -38,6 +40,23 @@ describe('goals', () => {
     state.stone = 10;
     expect(upgradeHut(state)).toBe(true);
     expect(isHutL2GoalFulfilled(state)).toBe(true);
+    expect(currentMiniGoal(state)).toBe('shrine');
+
+    state.wood = 18;
+    state.stone = 14;
+    expect(buildShrine(state)).toBe(true);
+    expect(isShrineGoalFulfilled(state)).toBe(true);
+    expect(currentMiniGoal(state)).toBe('relic1');
+
+    state.wood = 4 * 6;
+    state.stone = 3 * 6;
+    for (let i = 0; i < 5; i += 1) {
+      expect(feedShrine(state)).toBe(true);
+      expect(currentMiniGoal(state)).toBe('relic1');
+    }
+    expect(feedShrine(state)).toBe(true);
+    expect(isRelic1GoalFulfilled(state)).toBe(true);
     expect(currentMiniGoal(state)).toBe('done');
+    expect(currentMiniGoal(state)).not.toBe('relic1');
   });
 });

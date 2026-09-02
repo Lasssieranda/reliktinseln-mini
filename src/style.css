@@ -240,8 +240,14 @@ body {
   font-size: 15px;
 }
 
-.qa-btn:active {
+.qa-btn:active:not(:disabled) {
   transform: translateY(1px);
+}
+
+.qa-btn:disabled {
+  background: #d8d0c2;
+  color: #8a8478;
+  cursor: default;
 }
 
 .qa-btn-ghost {

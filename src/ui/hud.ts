@@ -1,10 +1,15 @@
 import {
   canBuildHut,
   canBuildQuarry,
+  canBuildShrine,
+  canFeedShrine,
   canUpgradeHut,
+  FEED_COST,
   HUT_COST,
   HUT_L2_COST,
   QUARRY_COST,
+  SHRINE_COST,
+  SHRINE_FEEDS_NEEDED,
 } from '../game/economy';
 import { currentMiniGoal } from '../game/goals';
 import type { GameState } from '../game/state';
@@ -103,14 +108,25 @@ export function createHud(
       goalTitle.textContent = 'Mini-Ziel: Hütte Stufe 2';
       goalCost.textContent = `${HUT_L2_COST.wood} Holz · ${HUT_L2_COST.stone} Stein`;
       setActionReady('Hütte verbessern', canUpgradeHut(state));
+    } else if (phase === 'shrine') {
+      goal.classList.remove('is-done');
+      goalTitle.textContent = 'Mini-Ziel: Schrein';
+      goalCost.textContent = `${SHRINE_COST.wood} Holz · ${SHRINE_COST.stone} Stein`;
+      setActionReady('Schrein bauen', canBuildShrine(state));
+    } else if (phase === 'relic1') {
+      goal.classList.remove('is-done');
+      const nextGabe = Math.min(state.shrineFeeds + 1, SHRINE_FEEDS_NEEDED);
+      goalTitle.textContent = 'Mini-Ziel: Relikt 1';
+      goalCost.textContent = `${FEED_COST.wood} Holz · ${FEED_COST.stone} Stein · Gabe ${nextGabe}/${SHRINE_FEEDS_NEEDED}`;
+      setActionReady('Schrein füttern', canFeedShrine(state));
     } else {
       goal.classList.add('is-done');
       goalTitle.textContent = 'Mini-Ziel: erledigt';
-      goalCost.textContent = 'Hütte Stufe 2';
+      goalCost.textContent = 'Waldsplitter';
       action.hidden = false;
       action.disabled = true;
       action.classList.add('is-status');
-      action.textContent = 'Hütte ist gewachsen — das ist deine Insel.';
+      action.textContent = 'Waldsplitter liegt auf der Insel.';
     }
   };
 

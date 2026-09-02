@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeLayout, QUARRY_RECT } from './layers';
+import { computeLayout, HUT_RECT, QUARRY_RECT, RELIC_RECT, SHRINE_RECT } from './layers';
 import { canvasCssToStage, computeStageView, STAGE_H, STAGE_W } from './view';
 
 describe('stage view', () => {
@@ -64,3 +64,23 @@ describe('stage layout', () => {
     expect(l2.hut.y + l2.hut.h / 2).toBeCloseTo(l1.hut.y + l1.hut.h / 2);
   });
 });
+
+  it('places shrine and relic on the island with hits at least 48px', () => {
+    const layout = computeLayout({ hutLevel: 2, quarryLevel: 1, shrineBuilt: true, relic1: true });
+    expect(layout.shrine).toEqual(SHRINE_RECT);
+    expect(layout.relic).toEqual(RELIC_RECT);
+    expect(layout.shrine.w).toBeGreaterThanOrEqual(48);
+    expect(layout.shrine.h).toBeGreaterThanOrEqual(48);
+    expect(layout.relic.w).toBeGreaterThanOrEqual(48);
+    expect(layout.relic.h).toBeGreaterThanOrEqual(48);
+  });
+
+  it('picks plot hut → quarry → hut upgrade → shrine build → shrine feed', () => {
+    expect(computeLayout({ hutLevel: 0 }).plot).toEqual(HUT_RECT);
+    expect(computeLayout({ hutLevel: 1, quarryLevel: 0 }).plot).toEqual(QUARRY_RECT);
+    const upgrade = computeLayout({ hutLevel: 1, quarryLevel: 1 });
+    expect(upgrade.plot.x + upgrade.plot.w / 2).toBeCloseTo(HUT_RECT.x + HUT_RECT.w / 2);
+    expect(computeLayout({ hutLevel: 2, quarryLevel: 1, shrineBuilt: false }).plot).toEqual(SHRINE_RECT);
+    expect(computeLayout({ hutLevel: 2, quarryLevel: 1, shrineBuilt: true, relic1: false }).plot).toEqual(SHRINE_RECT);
+  });
+

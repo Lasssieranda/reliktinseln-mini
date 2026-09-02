@@ -1,5 +1,5 @@
 import type { GameState } from './state';
-import { canBuildHut, canBuildQuarry, canUpgradeHut } from './economy';
+import { canBuildHut, canBuildQuarry, canBuildShrine, canFeedShrine, canUpgradeHut } from './economy';
 import { HUT_RECT, computeLayout, type Layout, type Rect } from './layers';
 import {
   FLASH_MS,
@@ -7,6 +7,9 @@ import {
   floatProgress,
   hutVisualScale,
   islandSettleY,
+  relicAppearScale,
+  relicBeatEnvelope,
+  relicIdleAlpha,
   squashAmount,
   type FloatText,
   type SquashFx,
@@ -34,6 +37,9 @@ export type SceneFx = {
   quarryBuild: TimedFx | null;
   hutPulse: TimedFx | null;
   islandSettle: TimedFx | null;
+  shrineBuild: TimedFx | null;
+  relicBeat: TimedFx | null;
+  timeMs: number;
 };
 
 export function resizeCanvas(canvas: HTMLCanvasElement): ViewSize {
@@ -81,7 +87,7 @@ function roundRect(
   ctx.closePath();
 }
 
-function drawSkyBleed(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+function drawSkyBleed(ctx: CanvasRenderingContext2D, w: number, h: number, cool = 0): void {
   const sky = ctx.createLinearGradient(0, 0, 0, h);
   sky.addColorStop(0, '#7EB7D6');
   sky.addColorStop(0.48, '#B7D4E4');
@@ -98,6 +104,11 @@ function drawSkyBleed(ctx: CanvasRenderingContext2D, w: number, h: number): void
   ctx.ellipse(w * 0.78, h * 0.14, Math.max(50, w * 0.08), 15, 0.06, 0, Math.PI * 2);
   ctx.ellipse(w * 0.88, h * 0.13, Math.max(30, w * 0.05), 11, -0.1, 0, Math.PI * 2);
   ctx.fill();
+
+  if (cool > 0) {
+    ctx.fillStyle = `rgba(36, 52, 110, ${0.32 * Math.min(1, cool)})`;
+    ctx.fillRect(0, 0, w, h);
+  }
 }
 
 function drawWaterBleed(
@@ -568,6 +579,166 @@ function drawQuarry(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): v
   ctx.restore();
 }
 
+
+function drawShrine(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, glow: number): void {
+  const cx = rect.x + rect.w / 2;
+  const baseY = rect.y + rect.h;
+
+  ctx.save();
+  ctx.translate(cx, baseY);
+  ctx.scale(scale, scale);
+  ctx.translate(-cx, -baseY);
+
+  if (glow > 0) {
+    const g = ctx.createRadialGradient(cx, rect.y + rect.h * 0.42, 6, cx, rect.y + rect.h * 0.5, rect.w * 0.9);
+    g.addColorStop(0, `rgba(186, 230, 244, ${0.48 * glow})`);
+    g.addColorStop(1, 'rgba(186, 230, 244, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, rect.y + rect.h * 0.48, rect.w * 0.72, rect.h * 0.58, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = 'rgba(40, 50, 35, 0.2)';
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, baseY - 3, rect.w * 0.4, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const platX = rect.x + rect.w * 0.08;
+  const platY = rect.y + rect.h * 0.62;
+  const platW = rect.w * 0.84;
+  const platH = rect.h * 0.3;
+
+  ctx.fillStyle = '#B08A58';
+  ctx.beginPath();
+  ctx.moveTo(platX + 4, platY + platH);
+  ctx.lineTo(platX, platY + 8);
+  ctx.lineTo(platX + platW * 0.18, platY);
+  ctx.lineTo(platX + platW * 0.82, platY + 2);
+  ctx.lineTo(platX + platW, platY + 10);
+  ctx.lineTo(platX + platW - 4, platY + platH);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#C9A874';
+  ctx.beginPath();
+  ctx.moveTo(platX + 6, platY + 10);
+  ctx.lineTo(platX + platW * 0.18, platY + 1);
+  ctx.lineTo(platX + platW * 0.58, platY + 3);
+  ctx.lineTo(platX + platW * 0.52, platY + 14);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#9A7A4C';
+  ctx.beginPath();
+  ctx.moveTo(platX + platW * 0.55, platY + 4);
+  ctx.lineTo(platX + platW * 0.82, platY + 2);
+  ctx.lineTo(platX + platW - 2, platY + 10);
+  ctx.lineTo(platX + platW * 0.58, platY + 16);
+  ctx.closePath();
+  ctx.fill();
+
+  const leftX = rect.x + rect.w * 0.28;
+  const rightX = rect.x + rect.w * 0.72;
+  const footY = platY + 2;
+  const capY = rect.y + rect.h * 0.16;
+  const archY = rect.y + rect.h * 0.22;
+
+  ctx.fillStyle = '#C4B090';
+  roundRect(ctx, leftX - 6, capY + 8, 12, footY - capY - 8, 3);
+  ctx.fill();
+  roundRect(ctx, rightX - 6, capY + 8, 12, footY - capY - 8, 3);
+  ctx.fill();
+  ctx.fillStyle = '#D8C8A4';
+  roundRect(ctx, leftX - 4, capY + 12, 5, footY - capY - 16, 2);
+  ctx.fill();
+  roundRect(ctx, rightX - 4, capY + 12, 5, footY - capY - 16, 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#D2C4A0';
+  ctx.beginPath();
+  ctx.moveTo(leftX - 10, archY + 10);
+  ctx.quadraticCurveTo(cx, capY - 6, rightX + 10, archY + 10);
+  ctx.lineTo(rightX + 8, archY + 16);
+  ctx.quadraticCurveTo(cx, capY + 4, leftX - 8, archY + 16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#E8DCC0';
+  ctx.beginPath();
+  ctx.moveTo(leftX - 6, archY + 10);
+  ctx.quadraticCurveTo(cx, capY - 2, rightX + 6, archY + 10);
+  ctx.lineTo(rightX + 4, archY + 13);
+  ctx.quadraticCurveTo(cx, capY + 2, leftX - 4, archY + 13);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#6F9A55';
+  ctx.beginPath();
+  ctx.ellipse(leftX - 10, footY + 4, 7, 3.2, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(rightX + 8, footY + 5, 6, 2.8, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawRelic(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, alpha: number): void {
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha;
+
+  ctx.fillStyle = '#4E8EAE';
+  ctx.beginPath();
+  ctx.moveTo(0, -22);
+  ctx.lineTo(13, -5);
+  ctx.lineTo(9, 16);
+  ctx.lineTo(0, 21);
+  ctx.lineTo(-9, 16);
+  ctx.lineTo(-13, -5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#7EC8D8';
+  ctx.beginPath();
+  ctx.moveTo(0, -22);
+  ctx.lineTo(13, -5);
+  ctx.lineTo(0, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#A8E4F0';
+  ctx.beginPath();
+  ctx.moveTo(0, -22);
+  ctx.lineTo(-8, -6);
+  ctx.lineTo(0, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#5BA8C4';
+  ctx.beginPath();
+  ctx.moveTo(0, 2);
+  ctx.lineTo(13, -5);
+  ctx.lineTo(9, 16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#E8F8FC';
+  ctx.beginPath();
+  ctx.moveTo(-3, -16);
+  ctx.lineTo(1, -18);
+  ctx.lineTo(3, -10);
+  ctx.lineTo(-1, -8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
 function drawFloatTexts(ctx: CanvasRenderingContext2D, floats: FloatText[]): void {
   ctx.font = '700 16px system-ui, sans-serif';
   ctx.textAlign = 'center';
@@ -596,9 +767,10 @@ export function drawScene(
 ): void {
   const { canvasW, canvasH, scale, ox, oy } = view;
 
+  const cool = relicBeatEnvelope(fx.relicBeat);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, canvasW, canvasH);
-  drawSkyBleed(ctx, canvasW, canvasH);
+  drawSkyBleed(ctx, canvasW, canvasH, cool);
   drawWaterBleed(ctx, canvasW, canvasH, oy + layout.waterY * scale);
 
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
@@ -608,10 +780,17 @@ export function drawScene(
   drawIsland(ctx, layout);
   drawTree(ctx, layout.tree, squashAmount(fx.squash, 'tree'), fx.flash?.kind === 'tree');
 
+  const relicScale = relicAppearScale(fx.relicBeat, state.relic1);
+  if (relicScale > 0 && state.shrineBuilt && state.relic1) {
+    drawRelic(ctx, layout.relic, relicScale, relicIdleAlpha(fx.timeMs));
+  }
+
   const hutScale = hutVisualScale(state.hutLevel, fx.hutBuild, fx.hutPulse);
   const showHutPlot = state.hutLevel === 0 && canBuildHut(state);
   const showQuarryPlot = state.hutLevel >= 1 && state.quarryLevel === 0 && canBuildQuarry(state);
   const showUpgradePlot = state.hutLevel === 1 && state.quarryLevel >= 1 && canUpgradeHut(state);
+  const showShrinePlot = !state.shrineBuilt && canBuildShrine(state);
+  const showFeedPlot = state.shrineBuilt && !state.relic1 && canFeedShrine(state);
 
   if (showHutPlot) {
     drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Hütte');
@@ -629,6 +808,17 @@ export function drawScene(
   }
   if (state.quarryLevel >= 1 && quarryScale > 0) {
     drawQuarry(ctx, layout.quarry, quarryScale);
+  }
+
+  const shrineScale = appearScale(fx.shrineBuild, state.shrineBuilt);
+  if (showShrinePlot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Schrein');
+  }
+  if (state.shrineBuilt && shrineScale > 0) {
+    drawShrine(ctx, layout.shrine, shrineScale, cool);
+  }
+  if (showFeedPlot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Gabe', true);
   }
 
   layout.rocks.forEach((rock, index) => {
