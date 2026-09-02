@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Reliktinseln Mini">
+  <rect width="64" height="64" rx="12" fill="#7EB7D6"/>
+  <rect y="40" width="64" height="24" fill="#4F92AD"/>
+  <ellipse cx="32" cy="42" rx="26" ry="12" fill="#557A42"/>
+  <ellipse cx="32" cy="40" rx="24" ry="10" fill="#6F9A55"/>
+  <rect x="26" y="28" width="12" height="10" fill="#D4B483"/>
+  <polygon points="22,28 32,18 42,28" fill="#A0533C"/>
+  <rect x="30" y="32" width="4" height="6" fill="#5C3A28"/>
+</svg>
