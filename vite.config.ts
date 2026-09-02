@@ -1,8 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const isGitHubPages = process.env.GITHUB_ACTIONS === 'true';
+const base = isGitHubPages ? '/reliktinseln-mini/' : '/';
+
 export default defineConfig({
-  base: '/',
+  base,
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.1.0'),
   },
@@ -17,7 +20,8 @@ export default defineConfig({
         short_name: 'Reliktinseln Mini',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: base,
+        scope: base,
         background_color: '#7EB7D6',
         theme_color: '#557A42',
         icons: [
