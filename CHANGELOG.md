@@ -13,3 +13,4 @@ Format: Keep a Changelog.
 - Projektgrundlage: README, PROJECT, ROADMAP, AGENTS, CHANGELOG, .gitignore
 - Privates Repo, Branch `main`
 - Kein Spielcode, M1 nicht gestartet
+- AGENTS.md: Tor entscheidet Stack und Technik, meldet an Karl
