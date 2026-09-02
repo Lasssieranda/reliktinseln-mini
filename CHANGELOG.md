@@ -12,5 +12,6 @@ Format: Keep a Changelog.
 
 ### Changed
 
+- M1 Visual Polish: festes 390×720-Stage mit Letterbox, Sky/Water full-bleed, flache Insel-Illustration, HUD-Karten, Tap-Squash und +1-Float
 - AGENTS.md: Tor entscheidet Stack und Technik, meldet an Karl
 - Abnahmekriterien in PROJECT.md und ROADMAP.md präzisiert

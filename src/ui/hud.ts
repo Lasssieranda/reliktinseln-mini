@@ -16,6 +16,9 @@ export function createHud(
 ): HudApi {
   root.replaceChildren();
 
+  const chrome = document.createElement('div');
+  chrome.className = 'hud-chrome';
+
   const resources = document.createElement('div');
   resources.className = 'hud-resources';
 
@@ -63,22 +66,28 @@ export function createHud(
   versionEl.textContent = `v${VERSION}`;
   versionEl.setAttribute('aria-label', `Version ${VERSION}`);
 
-  root.append(resources, goal, action, hint, versionEl);
+  chrome.append(resources, goal, action, hint, versionEl);
+  root.append(chrome);
 
   const render = (state: GameState): void => {
     woodEl.textContent = `Holz ${state.wood}`;
     stoneEl.textContent = `Stein ${state.stone}`;
     const affordable = canBuildHut(state);
     if (state.hutBuilt || state.goalDone) {
-      goalTitle.textContent = 'Mini-Ziel: Hütte steht';
-      goalCost.textContent = 'Die Insel sieht nach dir aus.';
-      action.hidden = true;
+      goal.classList.add('is-done');
+      goalTitle.textContent = 'Mini-Ziel: erledigt';
+      goalCost.textContent = 'Hütte steht';
+      action.hidden = false;
       action.disabled = true;
+      action.classList.add('is-status');
+      action.textContent = 'Hütte steht — das ist deine Insel.';
     } else {
+      goal.classList.remove('is-done');
       goalTitle.textContent = 'Mini-Ziel: Hütte';
       goalCost.textContent = `${HUT_COST.wood} Holz · ${HUT_COST.stone} Stein`;
       action.hidden = false;
       action.disabled = !affordable;
+      action.classList.remove('is-status');
       action.textContent = affordable ? 'Hütte bauen' : 'Noch nicht genug';
     }
   };
