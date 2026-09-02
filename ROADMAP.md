@@ -8,13 +8,14 @@ Spielbar:
 
 - Leere Insel, Hochformat, Touch
 - Tippen: Baum → Holz, Felsen → Stein
-- Mini-Ziel: Hütte bauen. Hütte steht. Insel sieht zum ersten Mal nach „meiner“ aus
+- Mini-Ziel: Hütte bauen. Mini-Ziel zeigt Holz- und Stein-Kosten. Bei genug Ressourcen: HUD-Aktion aktiv; Tipp auf die markierte Baustelle auf der Insel platziert die Hütte. Hütte steht. Insel sieht zum ersten Mal nach „meiner“ aus
+- Wachstum (Vorher/Nachher): Vor dem Bau keine Hütte auf der Insel; nach dem Bau steht die Hütte sichtbar auf der Insel (nicht nur HUD-Zahl)
 - Lokales Save (Reload, Tab zu, App-Kill)
 - PWA-Hülle (Manifest, standalone, Icon/Name)
 - Versionsstempel im UI
-- Save-Reset für Tests
+- QA Save-Reset: Versionslabel 3 s halten öffnet das QA-Menü (Save-Reset). Kein Spieler-Feature. M1 braucht Skip Relikt nicht
 
-Nicht in M1: Steinbruch, Upgrades, Schrein, Relikte, Audio, Pet. In diesem Repo-Stand existiert noch kein Spielcode.
+Nicht in M1: Steinbruch, Upgrades, Schrein, Relikte, Audio, Pet. In diesem Repo-Stand existiert noch kein Spielcode. **M1 ist nicht gestartet.**
 
 ## M2 — Steinbruch + sichtbares Upgrade
 
