@@ -1,16 +1,28 @@
 import './style.css';
-import { canBuildHut, tapRock, tapTree, buildHut } from './game/economy';
+import {
+  buildHut,
+  buildQuarry,
+  canBuildHut,
+  canBuildQuarry,
+  canUpgradeHut,
+  createProductionAcc,
+  tapRock,
+  tapTree,
+  tickProduction,
+  upgradeHut,
+} from './game/economy';
 import {
   FLASH_MS,
   FLOAT_MS,
   HUT_IN_MS,
+  HUT_PULSE_MS,
+  QUARRY_IN_MS,
   SETTLE_MS,
   SQUASH_MS,
   type FloatText,
   type SquashFx,
   type TimedFx,
 } from './game/fx';
-import { applyGoals } from './game/goals';
 import { bindInput } from './game/input';
 import { computeLayout, type Layout } from './game/layers';
 import { startLoop } from './game/loop';
@@ -47,7 +59,8 @@ if (!maybeCtx) {
 const gameCtx: CanvasRenderingContext2D = maybeCtx;
 
 let state: GameState = loadFromStorage(localStorage);
-let layout: Layout = computeLayout();
+let prodAcc = createProductionAcc();
+let layout: Layout = computeLayout(state);
 let stageView: StageView = computeStageView(1, 1);
 let plotPulse = 0;
 let hintUntil = 0;
@@ -55,6 +68,8 @@ let flash: TapFlash | null = null;
 let squash: SquashFx | null = null;
 let floats: FloatText[] = [];
 let hutBuild: TimedFx | null = null;
+let quarryBuild: TimedFx | null = null;
+let hutPulse: TimedFx | null = null;
 let islandSettle: TimedFx | null = null;
 
 const saver = startSaveScheduler({
@@ -62,9 +77,13 @@ const saver = startSaveScheduler({
   storage: localStorage,
 });
 
+function hasActivePlot(): boolean {
+  return canBuildHut(state) || canBuildQuarry(state) || canUpgradeHut(state);
+}
+
 const hud = createHud(hudRoot, {
   onBuildAction: () => {
-    if (!canBuildHut(state)) {
+    if (!hasActivePlot()) {
       return;
     }
     plotPulse = 1;
@@ -76,13 +95,15 @@ const hud = createHud(hudRoot, {
 function paint(): void {
   const view = resizeCanvas(gameCanvas);
   stageView = computeStageView(view.width, view.height);
-  layout = computeLayout();
+  layout = computeLayout(state);
   drawScene(gameCtx, layout, stageView, state, view.dpr, {
     plotPulse,
     flash,
     squash,
     floats,
     hutBuild,
+    quarryBuild,
+    hutPulse,
     islandSettle,
   });
 }
@@ -93,12 +114,15 @@ function resetFx(): void {
   squash = null;
   floats = [];
   hutBuild = null;
+  quarryBuild = null;
+  hutPulse = null;
   islandSettle = null;
 }
 
 function resetSave(): void {
   clearSave(localStorage);
   state = createInitialState();
+  prodAcc = createProductionAcc();
   resetFx();
   hud.setHint(null);
   saver.flush();
@@ -111,7 +135,7 @@ bindVersionHold(hud.versionEl, () => {
 });
 
 bindInput(gameCanvas, () => ({ layout, view: stageView }), {
-  plotActive: () => canBuildHut(state),
+  plotActive: () => hasActivePlot(),
   onTree: () => {
     tapTree(state);
     squash = { kind: 'tree', elapsed: 0 };
@@ -140,23 +164,60 @@ bindInput(gameCanvas, () => ({ layout, view: stageView }), {
     hud.render(state);
   },
   onPlot: () => {
-    if (!buildHut(state)) {
+    if (canBuildHut(state) && buildHut(state)) {
+      flash = { kind: 'plot', remaining: FLASH_MS };
+      plotPulse = 0;
+      hutBuild = { elapsed: 0 };
+      islandSettle = { elapsed: 0 };
+      hud.setHint(null);
+      saver.flush();
+      hud.render(state);
       return;
     }
-    applyGoals(state);
-    flash = { kind: 'plot', remaining: FLASH_MS };
-    plotPulse = 0;
-    hutBuild = { elapsed: 0 };
-    islandSettle = { elapsed: 0 };
-    hud.setHint(null);
-    saver.flush();
-    hud.render(state);
+    if (canBuildQuarry(state) && buildQuarry(state)) {
+      flash = { kind: 'plot', remaining: FLASH_MS };
+      plotPulse = 0;
+      quarryBuild = { elapsed: 0 };
+      islandSettle = { elapsed: 0 };
+      hud.setHint(null);
+      saver.flush();
+      hud.render(state);
+      return;
+    }
+    if (canUpgradeHut(state) && upgradeHut(state)) {
+      flash = { kind: 'plot', remaining: FLASH_MS };
+      plotPulse = 0;
+      hutPulse = { elapsed: 0 };
+      prodAcc.hutMs = 0;
+      hud.setHint(null);
+      saver.flush();
+      hud.render(state);
+    }
   },
 });
 
 startLoop({
   isPaused: () => document.hidden,
   update(dt) {
+    const gained = tickProduction(state, prodAcc, dt);
+    if (gained.wood > 0) {
+      floats.push({
+        text: '+1 Holz',
+        x: layout.hut.x + layout.hut.w / 2,
+        y: layout.hut.y + 8,
+        elapsed: 0,
+      });
+      hud.render(state);
+    }
+    if (gained.stone > 0) {
+      floats.push({
+        text: '+1 Stein',
+        x: layout.quarry.x + layout.quarry.w / 2,
+        y: layout.quarry.y + 6,
+        elapsed: 0,
+      });
+      hud.render(state);
+    }
     if (plotPulse > 0) {
       plotPulse = Math.max(0, plotPulse - dt / 900);
     }
@@ -180,6 +241,18 @@ startLoop({
       hutBuild.elapsed += dt;
       if (hutBuild.elapsed >= HUT_IN_MS) {
         hutBuild = null;
+      }
+    }
+    if (quarryBuild) {
+      quarryBuild.elapsed += dt;
+      if (quarryBuild.elapsed >= QUARRY_IN_MS) {
+        quarryBuild = null;
+      }
+    }
+    if (hutPulse) {
+      hutPulse.elapsed += dt;
+      if (hutPulse.elapsed >= HUT_PULSE_MS) {
+        hutPulse = null;
       }
     }
     if (islandSettle) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeLayout } from './layers';
+import { computeLayout, QUARRY_RECT } from './layers';
 import { canvasCssToStage, computeStageView, STAGE_H, STAGE_W } from './view';
 
 describe('stage view', () => {
@@ -43,10 +43,24 @@ describe('stage layout', () => {
     expect(layout.tree.h).toBeGreaterThanOrEqual(48);
     expect(layout.hut.w).toBeGreaterThanOrEqual(48);
     expect(layout.hut.h).toBeGreaterThanOrEqual(48);
+    expect(layout.quarry.w).toBeGreaterThanOrEqual(48);
+    expect(layout.quarry.h).toBeGreaterThanOrEqual(48);
+    expect(layout.quarry).toEqual(QUARRY_RECT);
     for (const rock of layout.rocks) {
       expect(rock.w).toBeGreaterThanOrEqual(48);
       expect(rock.h).toBeGreaterThanOrEqual(48);
     }
     expect(layout.rocks[0].x + layout.rocks[0].w).toBeLessThan(layout.rocks[1].x + 8);
+  });
+
+  it('expands hut hitbox for L2 around the same center', () => {
+    const l1 = computeLayout({ hutLevel: 1 });
+    const l2 = computeLayout({ hutLevel: 2 });
+    expect(l2.hut.w).toBeGreaterThan(l1.hut.w);
+    expect(l2.hut.h).toBeGreaterThan(l1.hut.h);
+    expect(l2.hut.w).toBeGreaterThanOrEqual(48);
+    expect(l2.hut.h).toBeGreaterThanOrEqual(48);
+    expect(l2.hut.x + l2.hut.w / 2).toBeCloseTo(l1.hut.x + l1.hut.w / 2);
+    expect(l2.hut.y + l2.hut.h / 2).toBeCloseTo(l1.hut.y + l1.hut.h / 2);
   });
 });

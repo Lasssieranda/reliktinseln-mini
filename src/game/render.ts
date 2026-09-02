@@ -1,10 +1,11 @@
 import type { GameState } from './state';
-import { canBuildHut } from './economy';
-import { computeLayout, type Layout, type Rect } from './layers';
+import { canBuildHut, canBuildQuarry, canUpgradeHut } from './economy';
+import { HUT_RECT, computeLayout, type Layout, type Rect } from './layers';
 import {
   FLASH_MS,
+  appearScale,
   floatProgress,
-  hutAppearScale,
+  hutVisualScale,
   islandSettleY,
   squashAmount,
   type FloatText,
@@ -30,6 +31,8 @@ export type SceneFx = {
   squash: SquashFx | null;
   floats: FloatText[];
   hutBuild: TimedFx | null;
+  quarryBuild: TimedFx | null;
+  hutPulse: TimedFx | null;
   islandSettle: TimedFx | null;
 };
 
@@ -301,10 +304,17 @@ function drawRock(
   ctx.restore();
 }
 
-function drawPlot(ctx: CanvasRenderingContext2D, rect: Rect, pulse: number, flash: boolean): void {
-  const pad = 5;
+function drawPlot(
+  ctx: CanvasRenderingContext2D,
+  rect: Rect,
+  pulse: number,
+  flash: boolean,
+  label: string,
+  overlay = false,
+): void {
+  const pad = overlay ? 7 : 5;
   ctx.save();
-  ctx.globalAlpha = 0.58 + pulse * 0.35;
+  ctx.globalAlpha = overlay ? 0.36 + pulse * 0.28 : 0.58 + pulse * 0.35;
   ctx.fillStyle = flash ? '#F0DE90' : '#E8D48C';
   roundRect(ctx, rect.x - pad, rect.y - pad, rect.w + pad * 2, rect.h + pad * 2, 12);
   ctx.fill();
@@ -314,16 +324,25 @@ function drawPlot(ctx: CanvasRenderingContext2D, rect: Rect, pulse: number, flas
   ctx.stroke();
   ctx.restore();
 
-  ctx.fillStyle = '#6A5A20';
-  ctx.font = '600 13px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Hütte', rect.x + rect.w / 2, rect.y + rect.h / 2);
+  if (!overlay) {
+    ctx.fillStyle = '#6A5A20';
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2);
+  } else {
+    ctx.fillStyle = '#6A5A20';
+    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, rect.x + rect.w / 2, rect.y - 4);
+  }
 }
 
-function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void {
+function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, hutLevel: number): void {
   const cx = rect.x + rect.w / 2;
   const baseY = rect.y + rect.h;
+  const tier2 = hutLevel >= 2;
 
   ctx.save();
   ctx.translate(cx, baseY);
@@ -332,13 +351,19 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void
 
   ctx.fillStyle = 'rgba(40, 50, 35, 0.2)';
   ctx.beginPath();
-  ctx.ellipse(cx, baseY - 2, rect.w * 0.4, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, baseY - 2, rect.w * (tier2 ? 0.46 : 0.4), tier2 ? 7 : 6, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  if (tier2) {
+    ctx.fillStyle = '#8A7348';
+    roundRect(ctx, rect.x + rect.w * 0.08, rect.y + rect.h * 0.86, rect.w * 0.84, rect.h * 0.12, 3);
+    ctx.fill();
+  }
 
   const wallX = rect.x + rect.w * 0.16;
   const wallW = rect.w * 0.68;
-  const wallH = rect.h * 0.46;
-  const wallY = rect.y + rect.h * 0.5;
+  const wallH = rect.h * (tier2 ? 0.5 : 0.46);
+  const wallY = rect.y + rect.h * (tier2 ? 0.46 : 0.5);
 
   ctx.fillStyle = '#C9A36C';
   roundRect(ctx, wallX, wallY, wallW, wallH, 3);
@@ -351,10 +376,10 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void
   ctx.fillStyle = '#8B3F2E';
   ctx.beginPath();
   ctx.moveTo(rect.x + rect.w * 0.04, wallY + 10);
-  ctx.lineTo(cx, rect.y + 4);
+  ctx.lineTo(cx, rect.y + (tier2 ? 0 : 4));
   ctx.lineTo(rect.x + rect.w * 0.96, wallY + 10);
   ctx.lineTo(rect.x + rect.w * 0.88, wallY + 18);
-  ctx.lineTo(cx, rect.y + 16);
+  ctx.lineTo(cx, rect.y + (tier2 ? 12 : 16));
   ctx.lineTo(rect.x + rect.w * 0.12, wallY + 18);
   ctx.closePath();
   ctx.fill();
@@ -362,11 +387,19 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void
   ctx.fillStyle = '#A04E3A';
   ctx.beginPath();
   ctx.moveTo(rect.x + rect.w * 0.1, wallY + 10);
-  ctx.lineTo(cx, rect.y + 6);
-  ctx.lineTo(cx, rect.y + 16);
+  ctx.lineTo(cx, rect.y + (tier2 ? 2 : 6));
+  ctx.lineTo(cx, rect.y + (tier2 ? 12 : 16));
   ctx.lineTo(rect.x + rect.w * 0.18, wallY + 16);
   ctx.closePath();
   ctx.fill();
+
+  if (tier2) {
+    ctx.fillStyle = '#7A382A';
+    roundRect(ctx, rect.x + rect.w * 0.72, rect.y + 8, 8, 16, 1);
+    ctx.fill();
+    ctx.fillStyle = '#6A6A68';
+    ctx.fillRect(rect.x + rect.w * 0.72, rect.y + 6, 8, 4);
+  }
 
   const doorW = wallW * 0.26;
   const doorH = wallH * 0.7;
@@ -396,6 +429,141 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void
   ctx.moveTo(winX, winY + winH / 2);
   ctx.lineTo(winX + winW, winY + winH / 2);
   ctx.stroke();
+
+  if (tier2) {
+    const win2X = wallX + wallW * 0.7;
+    roundRect(ctx, win2X, winY, winW * 0.85, winH, 2);
+    ctx.fillStyle = '#8EC4D4';
+    ctx.fill();
+    ctx.strokeStyle = '#5C3A28';
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawQuarry(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void {
+  const cx = rect.x + rect.w / 2;
+  const baseY = rect.y + rect.h;
+
+  ctx.save();
+  ctx.translate(cx, baseY);
+  ctx.scale(scale, scale);
+  ctx.translate(-cx, -baseY);
+
+  ctx.fillStyle = 'rgba(40, 50, 45, 0.22)';
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, baseY - 3, rect.w * 0.42, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const platX = rect.x + rect.w * 0.06;
+  const platY = rect.y + rect.h * 0.58;
+  const platW = rect.w * 0.88;
+  const platH = rect.h * 0.34;
+
+  ctx.fillStyle = '#6E6E66';
+  ctx.beginPath();
+  ctx.moveTo(platX + 4, platY + platH);
+  ctx.lineTo(platX, platY + 10);
+  ctx.lineTo(platX + platW * 0.22, platY);
+  ctx.lineTo(platX + platW * 0.78, platY + 3);
+  ctx.lineTo(platX + platW, platY + 12);
+  ctx.lineTo(platX + platW - 5, platY + platH);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#8A8A82';
+  ctx.beginPath();
+  ctx.moveTo(platX + 6, platY + 12);
+  ctx.lineTo(platX + platW * 0.22, platY + 1);
+  ctx.lineTo(platX + platW * 0.55, platY + 4);
+  ctx.lineTo(platX + platW * 0.5, platY + 16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#5C5C56';
+  ctx.beginPath();
+  ctx.moveTo(platX + platW * 0.55, platY + 4);
+  ctx.lineTo(platX + platW * 0.78, platY + 3);
+  ctx.lineTo(platX + platW - 2, platY + 12);
+  ctx.lineTo(platX + platW * 0.58, platY + 18);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(platX + platW * 0.18, platY + 4);
+  ctx.lineTo(platX + platW * 0.5, platY + 2);
+  ctx.stroke();
+
+  const wood = '#8A5A32';
+  const woodDark = '#6B4428';
+  const woodLight = '#C9A36C';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const leftX = rect.x + rect.w * 0.28;
+  const rightX = rect.x + rect.w * 0.72;
+  const topY = rect.y + rect.h * 0.12;
+  const beamY = rect.y + rect.h * 0.22;
+  const footY = platY + 4;
+
+  ctx.strokeStyle = woodDark;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(leftX - 10, footY);
+  ctx.lineTo(leftX, topY + 6);
+  ctx.lineTo(leftX + 10, footY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(rightX - 10, footY);
+  ctx.lineTo(rightX, topY + 6);
+  ctx.lineTo(rightX + 10, footY);
+  ctx.stroke();
+
+  ctx.strokeStyle = wood;
+  ctx.lineWidth = 3.4;
+  ctx.beginPath();
+  ctx.moveTo(leftX - 9, footY - 1);
+  ctx.lineTo(leftX, topY + 8);
+  ctx.lineTo(leftX + 9, footY - 1);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(rightX - 9, footY - 1);
+  ctx.lineTo(rightX, topY + 8);
+  ctx.lineTo(rightX + 9, footY - 1);
+  ctx.stroke();
+
+  ctx.strokeStyle = woodLight;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(leftX - 2, beamY);
+  ctx.lineTo(rightX + 2, beamY);
+  ctx.stroke();
+  ctx.strokeStyle = wood;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(leftX + 2, beamY + 6);
+  ctx.lineTo(rightX - 2, beamY + 6);
+  ctx.stroke();
+
+  ctx.fillStyle = '#7A7A72';
+  ctx.beginPath();
+  ctx.moveTo(rect.x + rect.w * 0.14, platY + 2);
+  ctx.lineTo(rect.x + rect.w * 0.2, platY - 10);
+  ctx.lineTo(rect.x + rect.w * 0.32, platY - 6);
+  ctx.lineTo(rect.x + rect.w * 0.3, platY + 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#686860';
+  ctx.beginPath();
+  ctx.moveTo(rect.x + rect.w * 0.24, platY + 4);
+  ctx.lineTo(rect.x + rect.w * 0.3, platY - 8);
+  ctx.lineTo(rect.x + rect.w * 0.4, platY - 2);
+  ctx.lineTo(rect.x + rect.w * 0.36, platY + 10);
+  ctx.closePath();
+  ctx.fill();
 
   ctx.restore();
 }
@@ -439,16 +607,33 @@ export function drawScene(
   ctx.translate(0, islandSettleY(fx.islandSettle));
   drawIsland(ctx, layout);
   drawTree(ctx, layout.tree, squashAmount(fx.squash, 'tree'), fx.flash?.kind === 'tree');
+
+  const hutScale = hutVisualScale(state.hutLevel, fx.hutBuild, fx.hutPulse);
+  const showHutPlot = state.hutLevel === 0 && canBuildHut(state);
+  const showQuarryPlot = state.hutLevel >= 1 && state.quarryLevel === 0 && canBuildQuarry(state);
+  const showUpgradePlot = state.hutLevel === 1 && state.quarryLevel >= 1 && canUpgradeHut(state);
+
+  if (showHutPlot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Hütte');
+  }
+  if (state.hutLevel >= 1 && hutScale > 0) {
+    drawHut(ctx, HUT_RECT, hutScale, state.hutLevel);
+  }
+  if (showUpgradePlot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Stufe 2', true);
+  }
+
+  const quarryScale = appearScale(fx.quarryBuild, state.quarryLevel >= 1);
+  if (showQuarryPlot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Steinbruch');
+  }
+  if (state.quarryLevel >= 1 && quarryScale > 0) {
+    drawQuarry(ctx, layout.quarry, quarryScale);
+  }
+
   layout.rocks.forEach((rock, index) => {
     drawRock(ctx, rock, squashAmount(fx.squash, 'rock', index), fx.flash?.kind === 'rock', index);
   });
-
-  const hutScale = hutAppearScale(fx.hutBuild, state.hutBuilt);
-  if (state.hutBuilt && hutScale > 0) {
-    drawHut(ctx, layout.hut, hutScale);
-  } else if (!state.hutBuilt && canBuildHut(state)) {
-    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot');
-  }
   ctx.restore();
 
   drawFloatTexts(ctx, fx.floats);
