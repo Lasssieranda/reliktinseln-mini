@@ -84,11 +84,13 @@ bindInput(gameCanvas, () => layout, {
   onTree: () => {
     tapTree(state);
     flash = { kind: 'tree', remaining: FLASH_MS };
+    saver.flush();
     hud.render(state);
   },
   onRock: () => {
     tapRock(state);
     flash = { kind: 'rock', remaining: FLASH_MS };
+    saver.flush();
     hud.render(state);
   },
   onPlot: () => {

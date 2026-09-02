@@ -4,14 +4,13 @@ Format: Keep a Changelog.
 
 ## [Unreleased]
 
-### Changed
-
-- Abnahmekriterien in PROJECT.md und ROADMAP.md präzisiert: M1 Wachstum/Hüttenbau, Inhalt für MVP-Go, Tab vs. PWA-Save, QA-Menü (Hold Version 3 s)
-
 ### Added
 
-- M1: Hütte kostet 10 Holz und 5 Stein
-- Projektgrundlage: README, PROJECT, ROADMAP, AGENTS, CHANGELOG, .gitignore
-- Privates Repo, Branch `main`
-- Kein Spielcode, M1 nicht gestartet
+- M1 spielbare Insel: Tippen Holz/Stein, Mini-Ziel Hütte (10 Holz / 5 Stein), Hütte sichtbar auf der Insel
+- PWA-Hülle (standalone, Portrait), lokales Save, Version im UI, QA Save-Reset (Version 3s halten)
+- Vitest für economy, goals, save
+
+### Changed
+
 - AGENTS.md: Tor entscheidet Stack und Technik, meldet an Karl
+- Abnahmekriterien in PROJECT.md und ROADMAP.md präzisiert
