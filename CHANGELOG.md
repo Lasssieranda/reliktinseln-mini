@@ -10,6 +10,7 @@ Format: Keep a Changelog.
 
 ### Added
 
+- M1: Hütte kostet 10 Holz und 5 Stein
 - Projektgrundlage: README, PROJECT, ROADMAP, AGENTS, CHANGELOG, .gitignore
 - Privates Repo, Branch `main`
 - Kein Spielcode, M1 nicht gestartet
