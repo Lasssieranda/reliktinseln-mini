@@ -1,31 +1,28 @@
 import type { Layout } from './layers';
 import { hitTest } from './layers';
+import { canvasCssToStage, type StageView } from './view';
 
 export type InputHandlers = {
   onTree: () => void;
-  onRock: () => void;
+  onRock: (index: number) => void;
   onPlot: () => void;
   plotActive: () => boolean;
 };
 
-function clientToCanvas(
+function clientToStage(
   event: PointerEvent,
   canvas: HTMLCanvasElement,
-  logicalWidth: number,
-  logicalHeight: number,
+  view: StageView,
 ): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = logicalWidth / Math.max(1, rect.width);
-  const scaleY = logicalHeight / Math.max(1, rect.height);
-  return {
-    x: (event.clientX - rect.left) * scaleX,
-    y: (event.clientY - rect.top) * scaleY,
-  };
+  const cssX = (event.clientX - rect.left) * (view.canvasW / Math.max(1, rect.width));
+  const cssY = (event.clientY - rect.top) * (view.canvasH / Math.max(1, rect.height));
+  return canvasCssToStage(cssX, cssY, view);
 }
 
 export function bindInput(
   canvas: HTMLCanvasElement,
-  getLayout: () => Layout,
+  getWorld: () => { layout: Layout; view: StageView },
   handlers: InputHandlers,
 ): { unbind: () => void } {
   const onPointerDown = (event: PointerEvent): void => {
@@ -33,8 +30,8 @@ export function bindInput(
       return;
     }
     event.preventDefault();
-    const layout = getLayout();
-    const point = clientToCanvas(event, canvas, layout.width, layout.height);
+    const { layout, view } = getWorld();
+    const point = clientToStage(event, canvas, view);
 
     if (handlers.plotActive() && hitTest(layout.plot, point.x, point.y)) {
       handlers.onPlot();
@@ -44,9 +41,9 @@ export function bindInput(
       handlers.onTree();
       return;
     }
-    for (const rock of layout.rocks) {
-      if (hitTest(rock, point.x, point.y)) {
-        handlers.onRock();
+    for (let i = 0; i < layout.rocks.length; i += 1) {
+      if (hitTest(layout.rocks[i], point.x, point.y)) {
+        handlers.onRock(i);
         return;
       }
     }

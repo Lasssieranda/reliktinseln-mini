@@ -1,3 +1,5 @@
+import { STAGE_H, STAGE_W } from './view';
+
 export type Rect = {
   x: number;
   y: number;
@@ -15,8 +17,7 @@ export type Ellipse = {
 export type Layout = {
   width: number;
   height: number;
-  sky: Rect;
-  water: Rect;
+  waterY: number;
   island: Ellipse;
   tree: Rect;
   rocks: Rect[];
@@ -28,56 +29,48 @@ export function hitTest(rect: Rect, x: number, y: number): boolean {
   return x >= rect.x && y >= rect.y && x <= rect.x + rect.w && y <= rect.y + rect.h;
 }
 
-function minSize(value: number, min: number): number {
-  return Math.max(min, value);
-}
+export function computeLayout(): Layout {
+  const width = STAGE_W;
+  const height = STAGE_H;
 
-export function computeLayout(width: number, height: number): Layout {
   const island: Ellipse = {
-    cx: width * 0.5,
-    cy: height * 0.58,
-    rx: width * 0.42,
-    ry: height * 0.22,
+    cx: 195,
+    cy: 452,
+    rx: 156,
+    ry: 100,
   };
 
-  const treeW = minSize(width * 0.2, 56);
-  const treeH = minSize(height * 0.28, 96);
   const tree: Rect = {
-    x: island.cx - island.rx * 0.72,
-    y: island.cy - island.ry * 1.15,
-    w: treeW,
-    h: treeH,
+    x: 42,
+    y: 278,
+    w: 96,
+    h: 168,
   };
 
-  const rockW = minSize(width * 0.16, 48);
-  const rockH = minSize(height * 0.09, 40);
   const rockA: Rect = {
-    x: island.cx + island.rx * 0.22,
-    y: island.cy - island.ry * 0.18,
-    w: rockW,
-    h: rockH,
+    x: 250,
+    y: 378,
+    w: 62,
+    h: 50,
   };
   const rockB: Rect = {
-    x: island.cx + island.rx * 0.38,
-    y: island.cy + island.ry * 0.12,
-    w: rockW * 0.78,
-    h: rockH * 0.82,
+    x: 310,
+    y: 448,
+    w: 54,
+    h: 48,
   };
 
-  const hutW = minSize(width * 0.22, 64);
-  const hutH = minSize(height * 0.16, 58);
   const hut: Rect = {
-    x: island.cx - hutW * 0.42,
-    y: island.cy - island.ry * 0.55,
-    w: hutW,
-    h: hutH,
+    x: 146,
+    y: 346,
+    w: 90,
+    h: 80,
   };
 
   return {
     width,
     height,
-    sky: { x: 0, y: 0, w: width, h: height },
-    water: { x: 0, y: height * 0.62, w: width, h: height * 0.38 },
+    waterY: 438,
     island,
     tree,
     rocks: [rockA, rockB],
