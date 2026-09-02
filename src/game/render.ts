@@ -366,18 +366,25 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, hutLe
 
   ctx.fillStyle = 'rgba(40, 50, 35, 0.2)';
   ctx.beginPath();
-  ctx.ellipse(cx, baseY - 2, rect.w * (tier2 ? 0.46 : 0.4), tier2 ? 7 : 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, baseY - 2, rect.w * (tier3 ? 0.5 : tier2 ? 0.46 : 0.4), tier2 ? 7 : 6, 0, 0, Math.PI * 2);
   ctx.fill();
 
   if (tier2) {
     ctx.fillStyle = '#8A7348';
-    roundRect(ctx, rect.x + rect.w * 0.08, rect.y + rect.h * 0.86, rect.w * 0.84, rect.h * 0.12, 3);
+    roundRect(
+      ctx,
+      rect.x + rect.w * (tier3 ? 0.04 : 0.08),
+      rect.y + rect.h * 0.86,
+      rect.w * (tier3 ? 0.92 : 0.84),
+      rect.h * 0.12,
+      3,
+    );
     ctx.fill();
   }
 
-  const wallX = rect.x + rect.w * 0.16;
-  const wallW = rect.w * 0.68;
-  const wallH = rect.h * (tier2 ? 0.5 : 0.46);
+  const wallX = rect.x + rect.w * (tier3 ? 0.12 : 0.16);
+  const wallW = rect.w * (tier3 ? 0.76 : 0.68);
+  const wallH = rect.h * (tier3 ? 0.54 : tier2 ? 0.5 : 0.46);
   const wallY = rect.y + rect.h * (tier2 ? 0.46 : 0.5);
 
   ctx.fillStyle = '#C9A36C';
@@ -455,34 +462,20 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, hutLe
   }
 
   if (tier3) {
-    const gablePeakY = rect.y - 10;
-    const gableWallY = wallY + 2;
-    ctx.fillStyle = '#7A3426';
+    const boxW = winW + 4;
+    const boxH = 5;
+    const boxX = winX - 2;
+    const boxY = winY + winH + 2;
+    ctx.fillStyle = '#8A5A32';
+    roundRect(ctx, boxX, boxY, boxW, boxH, 1);
+    ctx.fill();
+    ctx.fillStyle = '#4C8E4A';
     ctx.beginPath();
-    ctx.moveTo(cx - rect.w * 0.22, gableWallY);
-    ctx.lineTo(cx, gablePeakY);
-    ctx.lineTo(cx + rect.w * 0.22, gableWallY);
-    ctx.lineTo(cx + rect.w * 0.16, gableWallY + 8);
-    ctx.lineTo(cx, gablePeakY + 10);
-    ctx.lineTo(cx - rect.w * 0.16, gableWallY + 8);
-    ctx.closePath();
+    ctx.ellipse(boxX + boxW * 0.28, boxY + 0.5, 3.2, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#9A4A36';
+    ctx.fillStyle = '#6AAA62';
     ctx.beginPath();
-    ctx.moveTo(cx - rect.w * 0.16, gableWallY);
-    ctx.lineTo(cx, gablePeakY + 2);
-    ctx.lineTo(cx, gablePeakY + 10);
-    ctx.lineTo(cx - rect.w * 0.1, gableWallY + 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#8EC4D4';
-    roundRect(ctx, cx - 6, gableWallY - 14, 12, 10, 1.5);
-    ctx.fill();
-    ctx.strokeStyle = '#5C3A28';
-    ctx.lineWidth = 1.1;
-    ctx.stroke();
-    ctx.fillStyle = '#6A6A68';
-    roundRect(ctx, rect.x + rect.w * 0.18, rect.y + 2, 7, 14, 1);
+    ctx.ellipse(boxX + boxW * 0.68, boxY + 0.5, 2.8, 2.0, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 

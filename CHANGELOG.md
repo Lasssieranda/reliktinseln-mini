@@ -13,6 +13,10 @@ Format: Keep a Changelog.
 - M3 Schrein und Relikt 1: Schrein 18/14, 6 Gaben à 4/3 → Waldsplitter, Taps +2, Save v3, QA Skip Relikt 1 (M4-Skip deaktiviert)
 - M4 Stufe 3 und Relikt 2: Steinbruch L2 16/12, Hütte L3 26/16, Steinbruch L3 22/18, 8 Gaben à 5/4 → Inselherz, Autos +1 extra, QA Skip Relikt 2, Save v3 Feeds 0–14
 
+### Fixed
+
+- Hütte L3-Silhouette und Relikt-Positionen: Satteldach wie L2, Draw-Scale 1.28, Relikte östlich der Hütte
+
 ### Changed
 
 - M1 Visual Polish: festes 390×720-Stage mit Letterbox, Sky/Water full-bleed, flache Insel-Illustration, HUD-Karten, Tap-Squash und +1-Float
