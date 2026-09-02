@@ -38,7 +38,7 @@ export function bindVersionHold(el: HTMLElement, onHold: () => void): { unbind: 
   };
 }
 
-export function openQaMenu(options: { onReset: () => void }): void {
+export function openQaMenu(options: { onReset: () => void; onSkipRelic1: () => void }): void {
   const existing = document.getElementById('qa-menu');
   existing?.remove();
 
@@ -66,6 +66,23 @@ export function openQaMenu(options: { onReset: () => void }): void {
     overlay.remove();
   });
 
+  const skip1 = document.createElement('button');
+  skip1.type = 'button';
+  skip1.className = 'qa-btn';
+  skip1.textContent = 'Skip Relikt 1';
+  skip1.addEventListener('click', () => {
+    options.onSkipRelic1();
+    overlay.remove();
+  });
+
+  const skip2 = document.createElement('button');
+  skip2.type = 'button';
+  skip2.className = 'qa-btn';
+  skip2.textContent = 'M4';
+  skip2.disabled = true;
+  skip2.setAttribute('aria-disabled', 'true');
+  skip2.title = 'Skip Relikt 2 — M4';
+
   const close = document.createElement('button');
   close.type = 'button';
   close.className = 'qa-btn qa-btn-ghost';
@@ -78,7 +95,7 @@ export function openQaMenu(options: { onReset: () => void }): void {
     }
   });
 
-  panel.append(title, note, reset, close);
+  panel.append(title, note, reset, skip1, skip2, close);
   overlay.append(panel);
   document.body.append(overlay);
 }

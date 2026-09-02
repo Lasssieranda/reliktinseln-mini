@@ -10,6 +10,7 @@ Format: Keep a Changelog.
 - PWA-Hülle (standalone, Portrait), lokales Save, Version im UI, QA Save-Reset (Version 3s halten)
 - Vitest für economy, goals, save
 - M2 Steinbruch und Hütte Stufe 2: Steinbruch 12/8, Hütte L2 20/10, langsame Autos (8s Holz / 8s Stein / 5s Holz L2, kein Catch-up), Save v2 mit v1-Migration
+- M3 Schrein und Relikt 1: Schrein 18/14, 6 Gaben à 4/3 → Waldsplitter, Taps +2, Save v3, QA Skip Relikt 1 (M4-Skip deaktiviert)
 
 ### Changed
 

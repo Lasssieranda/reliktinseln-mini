@@ -2,10 +2,15 @@ import './style.css';
 import {
   buildHut,
   buildQuarry,
+  buildShrine,
   canBuildHut,
   canBuildQuarry,
+  canBuildShrine,
+  canFeedShrine,
   canUpgradeHut,
   createProductionAcc,
+  feedShrine,
+  tapGain,
   tapRock,
   tapTree,
   tickProduction,
@@ -17,7 +22,9 @@ import {
   HUT_IN_MS,
   HUT_PULSE_MS,
   QUARRY_IN_MS,
+  RELIC_BEAT_MS,
   SETTLE_MS,
+  SHRINE_IN_MS,
   SQUASH_MS,
   type FloatText,
   type SquashFx,
@@ -26,6 +33,7 @@ import {
 import { bindInput } from './game/input';
 import { computeLayout, type Layout } from './game/layers';
 import { startLoop } from './game/loop';
+import { skipRelic1 } from './game/qa';
 import {
   attachViewportListeners,
   drawScene,
@@ -71,6 +79,8 @@ let hutBuild: TimedFx | null = null;
 let quarryBuild: TimedFx | null = null;
 let hutPulse: TimedFx | null = null;
 let islandSettle: TimedFx | null = null;
+let shrineBuild: TimedFx | null = null;
+let relicBeat: TimedFx | null = null;
 
 const saver = startSaveScheduler({
   getState: () => state,
@@ -78,7 +88,13 @@ const saver = startSaveScheduler({
 });
 
 function hasActivePlot(): boolean {
-  return canBuildHut(state) || canBuildQuarry(state) || canUpgradeHut(state);
+  return (
+    canBuildHut(state) ||
+    canBuildQuarry(state) ||
+    canUpgradeHut(state) ||
+    canBuildShrine(state) ||
+    canFeedShrine(state)
+  );
 }
 
 const hud = createHud(hudRoot, {
@@ -105,6 +121,9 @@ function paint(): void {
     quarryBuild,
     hutPulse,
     islandSettle,
+    shrineBuild,
+    relicBeat,
+    timeMs: performance.now(),
   });
 }
 
@@ -117,6 +136,8 @@ function resetFx(): void {
   quarryBuild = null;
   hutPulse = null;
   islandSettle = null;
+  shrineBuild = null;
+  relicBeat = null;
 }
 
 function resetSave(): void {
@@ -130,18 +151,29 @@ function resetSave(): void {
   paint();
 }
 
+function applySkipRelic1(): void {
+  skipRelic1(state);
+  prodAcc = createProductionAcc();
+  resetFx();
+  hud.setHint(null);
+  saver.flush();
+  hud.render(state);
+  paint();
+}
+
 bindVersionHold(hud.versionEl, () => {
-  openQaMenu({ onReset: resetSave });
+  openQaMenu({ onReset: resetSave, onSkipRelic1: applySkipRelic1 });
 });
 
 bindInput(gameCanvas, () => ({ layout, view: stageView }), {
   plotActive: () => hasActivePlot(),
   onTree: () => {
+    const gain = tapGain(state);
     tapTree(state);
     squash = { kind: 'tree', elapsed: 0 };
     flash = { kind: 'tree', remaining: FLASH_MS };
     floats.push({
-      text: '+1 Holz',
+      text: `+${gain} Holz`,
       x: layout.tree.x + layout.tree.w / 2,
       y: layout.tree.y + layout.tree.h * 0.22,
       elapsed: 0,
@@ -150,12 +182,13 @@ bindInput(gameCanvas, () => ({ layout, view: stageView }), {
     hud.render(state);
   },
   onRock: (index) => {
+    const gain = tapGain(state);
     tapRock(state);
     squash = { kind: 'rock', elapsed: 0, rockIndex: index };
     flash = { kind: 'rock', remaining: FLASH_MS };
     const rock = layout.rocks[index] ?? layout.rocks[0];
     floats.push({
-      text: '+1 Stein',
+      text: `+${gain} Stein`,
       x: rock.x + rock.w / 2,
       y: rock.y,
       elapsed: 0,
@@ -190,6 +223,27 @@ bindInput(gameCanvas, () => ({ layout, view: stageView }), {
       hutPulse = { elapsed: 0 };
       prodAcc.hutMs = 0;
       hud.setHint(null);
+      saver.flush();
+      hud.render(state);
+      return;
+    }
+    if (canBuildShrine(state) && buildShrine(state)) {
+      flash = { kind: 'plot', remaining: FLASH_MS };
+      plotPulse = 0;
+      shrineBuild = { elapsed: 0 };
+      islandSettle = { elapsed: 0 };
+      hud.setHint(null);
+      saver.flush();
+      hud.render(state);
+      return;
+    }
+    if (canFeedShrine(state) && feedShrine(state)) {
+      flash = { kind: 'plot', remaining: FLASH_MS };
+      plotPulse = 0;
+      hud.setHint(null);
+      if (state.relic1) {
+        relicBeat = { elapsed: 0 };
+      }
       saver.flush();
       hud.render(state);
     }
@@ -259,6 +313,18 @@ startLoop({
       islandSettle.elapsed += dt;
       if (islandSettle.elapsed >= SETTLE_MS) {
         islandSettle = null;
+      }
+    }
+    if (shrineBuild) {
+      shrineBuild.elapsed += dt;
+      if (shrineBuild.elapsed >= SHRINE_IN_MS) {
+        shrineBuild = null;
+      }
+    }
+    if (relicBeat) {
+      relicBeat.elapsed += dt;
+      if (relicBeat.elapsed >= RELIC_BEAT_MS) {
+        relicBeat = null;
       }
     }
     if (hintUntil && performance.now() > hintUntil) {

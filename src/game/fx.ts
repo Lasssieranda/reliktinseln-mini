@@ -2,10 +2,12 @@ export const SQUASH_MS = 120;
 export const FLOAT_MS = 400;
 export const HUT_IN_MS = 280;
 export const QUARRY_IN_MS = 280;
+export const SHRINE_IN_MS = 280;
 export const HUT_PULSE_MS = 220;
 export const SETTLE_MS = 340;
 export const FLASH_MS = 120;
 export const HUT_L2_DRAW_SCALE = 1.22;
+export const RELIC_BEAT_MS = 900;
 
 export type SquashFx = {
   kind: 'tree' | 'rock';
@@ -83,4 +85,26 @@ export function floatProgress(elapsed: number): { alpha: number; yShift: number 
     alpha: 1 - p,
     yShift: p * 38,
   };
+}
+
+export function relicBeatEnvelope(fx: TimedFx | null): number {
+  if (!fx || fx.elapsed < 0 || fx.elapsed >= RELIC_BEAT_MS) {
+    return 0;
+  }
+  return Math.sin((fx.elapsed / RELIC_BEAT_MS) * Math.PI);
+}
+
+export function relicAppearScale(fx: TimedFx | null, relic1: boolean): number {
+  if (!relic1) {
+    return 0;
+  }
+  if (!fx) {
+    return 1;
+  }
+  const p = Math.min(1, fx.elapsed / RELIC_BEAT_MS);
+  return 1 - (1 - p) ** 3;
+}
+
+export function relicIdleAlpha(timeMs: number): number {
+  return 0.78 + 0.18 * (0.5 + 0.5 * Math.sin(timeMs / 480));
 }

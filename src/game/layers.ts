@@ -17,6 +17,8 @@ export type Ellipse = {
 
 export const HUT_RECT: Rect = { x: 146, y: 346, w: 90, h: 80 };
 export const QUARRY_RECT: Rect = { x: 214, y: 438, w: 88, h: 70 };
+export const SHRINE_RECT: Rect = { x: 78, y: 468, w: 84, h: 72 };
+export const RELIC_RECT: Rect = { x: 172, y: 292, w: 52, h: 52 };
 
 export type Layout = {
   width: number;
@@ -27,6 +29,8 @@ export type Layout = {
   rocks: Rect[];
   hut: Rect;
   quarry: Rect;
+  shrine: Rect;
+  relic: Rect;
   plot: Rect;
 };
 
@@ -52,11 +56,26 @@ export function hutHitRect(hutLevel: number): Rect {
   return { ...HUT_RECT };
 }
 
-export function computeLayout(opts?: { hutLevel?: number; quarryLevel?: number }): Layout {
+function relicHitRect(): Rect {
+  const min = 48;
+  if (RELIC_RECT.w >= min && RELIC_RECT.h >= min) {
+    return { ...RELIC_RECT };
+  }
+  return scaleRectAroundCenter(RELIC_RECT, Math.max(min / RELIC_RECT.w, min / RELIC_RECT.h));
+}
+
+export function computeLayout(opts?: {
+  hutLevel?: number;
+  quarryLevel?: number;
+  shrineBuilt?: boolean;
+  relic1?: boolean;
+}): Layout {
   const width = STAGE_W;
   const height = STAGE_H;
   const hutLevel = opts?.hutLevel ?? 0;
   const quarryLevel = opts?.quarryLevel ?? 0;
+  const shrineBuilt = opts?.shrineBuilt ?? false;
+  const relic1 = opts?.relic1 ?? false;
 
   const island: Ellipse = {
     cx: 195,
@@ -87,14 +106,22 @@ export function computeLayout(opts?: { hutLevel?: number; quarryLevel?: number }
 
   const hut = hutHitRect(hutLevel);
   const quarry: Rect = { ...QUARRY_RECT };
+  const shrine: Rect = { ...SHRINE_RECT };
+  const relic: Rect = relicHitRect();
 
   let plot: Rect;
   if (hutLevel === 0) {
     plot = { ...HUT_RECT };
   } else if (quarryLevel === 0) {
     plot = { ...quarry };
-  } else {
+  } else if (hutLevel < 2) {
     plot = hutHitRect(Math.max(hutLevel, 1));
+  } else if (!shrineBuilt) {
+    plot = { ...shrine };
+  } else if (!relic1) {
+    plot = { ...shrine };
+  } else {
+    plot = hut;
   }
 
   return {
@@ -106,6 +133,8 @@ export function computeLayout(opts?: { hutLevel?: number; quarryLevel?: number }
     rocks: [rockA, rockB],
     hut,
     quarry,
+    shrine,
+    relic,
     plot,
   };
 }

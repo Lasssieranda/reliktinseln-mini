@@ -3,6 +3,9 @@ import type { GameState } from './state';
 export const HUT_COST = { wood: 10, stone: 5 } as const;
 export const QUARRY_COST = { wood: 12, stone: 8 } as const;
 export const HUT_L2_COST = { wood: 20, stone: 10 } as const;
+export const SHRINE_COST = { wood: 18, stone: 14 } as const;
+export const FEED_COST = { wood: 4, stone: 3 } as const;
+export const SHRINE_FEEDS_NEEDED = 6;
 
 export const HUT_L1_INTERVAL_MS = 8000;
 export const HUT_L2_INTERVAL_MS = 5000;
@@ -22,12 +25,16 @@ export function createProductionAcc(): ProductionAcc {
   return { hutMs: 0, quarryMs: 0 };
 }
 
+export function tapGain(state: GameState): number {
+  return state.relic1 ? 2 : 1;
+}
+
 export function tapTree(state: GameState): void {
-  state.wood += 1;
+  state.wood += tapGain(state);
 }
 
 export function tapRock(state: GameState): void {
-  state.stone += 1;
+  state.stone += tapGain(state);
 }
 
 export function canBuildHut(state: GameState): boolean {
@@ -92,6 +99,52 @@ export function upgradeHut(state: GameState): boolean {
   state.wood -= HUT_L2_COST.wood;
   state.stone -= HUT_L2_COST.stone;
   state.hutLevel = 2;
+  return true;
+}
+
+export function canBuildShrine(state: GameState): boolean {
+  return (
+    state.hutLevel >= 2 &&
+    !state.shrineBuilt &&
+    state.wood >= SHRINE_COST.wood &&
+    state.stone >= SHRINE_COST.stone
+  );
+}
+
+export function buildShrine(state: GameState): boolean {
+  if (state.hutLevel < 2 || state.shrineBuilt) {
+    return false;
+  }
+  if (state.wood < SHRINE_COST.wood || state.stone < SHRINE_COST.stone) {
+    return false;
+  }
+  state.wood -= SHRINE_COST.wood;
+  state.stone -= SHRINE_COST.stone;
+  state.shrineBuilt = true;
+  state.shrineFeeds = 0;
+  return true;
+}
+
+export function canFeedShrine(state: GameState): boolean {
+  return (
+    state.shrineBuilt &&
+    !state.relic1 &&
+    state.shrineFeeds < SHRINE_FEEDS_NEEDED &&
+    state.wood >= FEED_COST.wood &&
+    state.stone >= FEED_COST.stone
+  );
+}
+
+export function feedShrine(state: GameState): boolean {
+  if (!canFeedShrine(state)) {
+    return false;
+  }
+  state.wood -= FEED_COST.wood;
+  state.stone -= FEED_COST.stone;
+  state.shrineFeeds = Math.min(SHRINE_FEEDS_NEEDED, state.shrineFeeds + 1);
+  if (state.shrineFeeds >= SHRINE_FEEDS_NEEDED) {
+    state.relic1 = true;
+  }
   return true;
 }
 
