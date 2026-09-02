@@ -1,16 +1,19 @@
+export type HutLevel = 0 | 1 | 2;
+export type QuarryLevel = 0 | 1;
+
 export type GameState = {
   wood: number;
   stone: number;
-  hutBuilt: boolean;
-  goalDone: boolean;
+  hutLevel: HutLevel;
+  quarryLevel: QuarryLevel;
 };
 
 export function createInitialState(): GameState {
   return {
     wood: 0,
     stone: 0,
-    hutBuilt: false,
-    goalDone: false,
+    hutLevel: 0,
+    quarryLevel: 0,
   };
 }
 
@@ -18,7 +21,11 @@ export function cloneState(state: GameState): GameState {
   return {
     wood: state.wood,
     stone: state.stone,
-    hutBuilt: state.hutBuilt,
-    goalDone: state.goalDone,
+    hutLevel: state.hutLevel,
+    quarryLevel: state.quarryLevel,
   };
+}
+
+export function isHutBuilt(state: GameState): boolean {
+  return state.hutLevel >= 1;
 }

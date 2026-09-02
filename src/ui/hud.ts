@@ -1,4 +1,12 @@
-import { canBuildHut, HUT_COST } from '../game/economy';
+import {
+  canBuildHut,
+  canBuildQuarry,
+  canUpgradeHut,
+  HUT_COST,
+  HUT_L2_COST,
+  QUARRY_COST,
+} from '../game/economy';
+import { currentMiniGoal } from '../game/goals';
 import type { GameState } from '../game/state';
 import { VERSION } from '../version';
 
@@ -69,26 +77,40 @@ export function createHud(
   chrome.append(resources, goal, action, hint, versionEl);
   root.append(chrome);
 
+  const setActionReady = (label: string, ready: boolean): void => {
+    action.hidden = false;
+    action.disabled = !ready;
+    action.classList.remove('is-status');
+    action.textContent = ready ? label : 'Noch nicht genug';
+  };
+
   const render = (state: GameState): void => {
     woodEl.textContent = `Holz ${state.wood}`;
     stoneEl.textContent = `Stein ${state.stone}`;
-    const affordable = canBuildHut(state);
-    if (state.hutBuilt || state.goalDone) {
-      goal.classList.add('is-done');
-      goalTitle.textContent = 'Mini-Ziel: erledigt';
-      goalCost.textContent = 'Hütte steht';
-      action.hidden = false;
-      action.disabled = true;
-      action.classList.add('is-status');
-      action.textContent = 'Hütte steht — das ist deine Insel.';
-    } else {
+    const phase = currentMiniGoal(state);
+    if (phase === 'hut') {
       goal.classList.remove('is-done');
       goalTitle.textContent = 'Mini-Ziel: Hütte';
       goalCost.textContent = `${HUT_COST.wood} Holz · ${HUT_COST.stone} Stein`;
+      setActionReady('Hütte bauen', canBuildHut(state));
+    } else if (phase === 'quarry') {
+      goal.classList.remove('is-done');
+      goalTitle.textContent = 'Mini-Ziel: Steinbruch';
+      goalCost.textContent = `${QUARRY_COST.wood} Holz · ${QUARRY_COST.stone} Stein`;
+      setActionReady('Steinbruch bauen', canBuildQuarry(state));
+    } else if (phase === 'hutL2') {
+      goal.classList.remove('is-done');
+      goalTitle.textContent = 'Mini-Ziel: Hütte Stufe 2';
+      goalCost.textContent = `${HUT_L2_COST.wood} Holz · ${HUT_L2_COST.stone} Stein`;
+      setActionReady('Hütte verbessern', canUpgradeHut(state));
+    } else {
+      goal.classList.add('is-done');
+      goalTitle.textContent = 'Mini-Ziel: erledigt';
+      goalCost.textContent = 'Hütte Stufe 2';
       action.hidden = false;
-      action.disabled = !affordable;
-      action.classList.remove('is-status');
-      action.textContent = affordable ? 'Hütte bauen' : 'Noch nicht genug';
+      action.disabled = true;
+      action.classList.add('is-status');
+      action.textContent = 'Hütte ist gewachsen — das ist deine Insel.';
     }
   };
 

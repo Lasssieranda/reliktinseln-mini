@@ -1,11 +1,20 @@
-import { createInitialState, type GameState } from './state';
+import { createInitialState, type GameState, type HutLevel, type QuarryLevel } from './state';
 
 export const SAVE_KEY = 'reliktinseln-mini-v1';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const SAVE_FLUSH_MS = 15_000;
 
 export type SaveBlob = {
   schemaVersion: number;
+  wood: number;
+  stone: number;
+  hutLevel: HutLevel;
+  quarryLevel: QuarryLevel;
+  updatedAt: number;
+};
+
+type V1SaveBlob = {
+  schemaVersion: 1;
   wood: number;
   stone: number;
   hutBuilt: boolean;
@@ -24,14 +33,22 @@ export function serializeState(state: GameState, updatedAt = Date.now()): SaveBl
     schemaVersion: SCHEMA_VERSION,
     wood: state.wood,
     stone: state.stone,
-    hutBuilt: state.hutBuilt,
-    goalDone: state.goalDone,
+    hutLevel: state.hutLevel,
+    quarryLevel: state.quarryLevel,
     updatedAt,
   };
 }
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isHutLevel(value: unknown): value is HutLevel {
+  return value === 0 || value === 1 || value === 2;
+}
+
+function isQuarryLevel(value: unknown): value is QuarryLevel {
+  return value === 0 || value === 1;
 }
 
 export function isSaveBlob(value: unknown): value is SaveBlob {
@@ -45,22 +62,51 @@ export function isSaveBlob(value: unknown): value is SaveBlob {
     blob.wood >= 0 &&
     isFiniteNumber(blob.stone) &&
     blob.stone >= 0 &&
+    isHutLevel(blob.hutLevel) &&
+    isQuarryLevel(blob.quarryLevel) &&
+    isFiniteNumber(blob.updatedAt)
+  );
+}
+
+function isV1SaveBlob(value: unknown): value is V1SaveBlob {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const blob = value as Record<string, unknown>;
+  return (
+    blob.schemaVersion === 1 &&
+    isFiniteNumber(blob.wood) &&
+    blob.wood >= 0 &&
+    isFiniteNumber(blob.stone) &&
+    blob.stone >= 0 &&
     typeof blob.hutBuilt === 'boolean' &&
     typeof blob.goalDone === 'boolean' &&
     isFiniteNumber(blob.updatedAt)
   );
 }
 
-export function parseSave(raw: unknown): GameState {
-  if (!isSaveBlob(raw)) {
-    return createInitialState();
-  }
+function migrateV1(blob: V1SaveBlob): GameState {
   return {
-    wood: raw.wood,
-    stone: raw.stone,
-    hutBuilt: raw.hutBuilt,
-    goalDone: raw.goalDone,
+    wood: blob.wood,
+    stone: blob.stone,
+    hutLevel: blob.hutBuilt ? 1 : 0,
+    quarryLevel: 0,
   };
+}
+
+export function parseSave(raw: unknown): GameState {
+  if (isSaveBlob(raw)) {
+    return {
+      wood: raw.wood,
+      stone: raw.stone,
+      hutLevel: raw.hutLevel,
+      quarryLevel: raw.quarryLevel,
+    };
+  }
+  if (isV1SaveBlob(raw)) {
+    return migrateV1(raw);
+  }
+  return createInitialState();
 }
 
 export function loadFromStorage(storage: StorageLike): GameState {

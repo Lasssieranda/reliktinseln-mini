@@ -1,3 +1,4 @@
+import { HUT_L2_DRAW_SCALE } from './fx';
 import { STAGE_H, STAGE_W } from './view';
 
 export type Rect = {
@@ -14,6 +15,9 @@ export type Ellipse = {
   ry: number;
 };
 
+export const HUT_RECT: Rect = { x: 146, y: 346, w: 90, h: 80 };
+export const QUARRY_RECT: Rect = { x: 214, y: 438, w: 88, h: 70 };
+
 export type Layout = {
   width: number;
   height: number;
@@ -22,6 +26,7 @@ export type Layout = {
   tree: Rect;
   rocks: Rect[];
   hut: Rect;
+  quarry: Rect;
   plot: Rect;
 };
 
@@ -29,9 +34,29 @@ export function hitTest(rect: Rect, x: number, y: number): boolean {
   return x >= rect.x && y >= rect.y && x <= rect.x + rect.w && y <= rect.y + rect.h;
 }
 
-export function computeLayout(): Layout {
+export function scaleRectAroundCenter(rect: Rect, scale: number): Rect {
+  const w = rect.w * scale;
+  const h = rect.h * scale;
+  return {
+    x: rect.x + (rect.w - w) / 2,
+    y: rect.y + (rect.h - h) / 2,
+    w,
+    h,
+  };
+}
+
+export function hutHitRect(hutLevel: number): Rect {
+  if (hutLevel >= 2) {
+    return scaleRectAroundCenter(HUT_RECT, HUT_L2_DRAW_SCALE);
+  }
+  return { ...HUT_RECT };
+}
+
+export function computeLayout(opts?: { hutLevel?: number; quarryLevel?: number }): Layout {
   const width = STAGE_W;
   const height = STAGE_H;
+  const hutLevel = opts?.hutLevel ?? 0;
+  const quarryLevel = opts?.quarryLevel ?? 0;
 
   const island: Ellipse = {
     cx: 195,
@@ -60,12 +85,17 @@ export function computeLayout(): Layout {
     h: 48,
   };
 
-  const hut: Rect = {
-    x: 146,
-    y: 346,
-    w: 90,
-    h: 80,
-  };
+  const hut = hutHitRect(hutLevel);
+  const quarry: Rect = { ...QUARRY_RECT };
+
+  let plot: Rect;
+  if (hutLevel === 0) {
+    plot = { ...HUT_RECT };
+  } else if (quarryLevel === 0) {
+    plot = { ...quarry };
+  } else {
+    plot = hutHitRect(Math.max(hutLevel, 1));
+  }
 
   return {
     width,
@@ -75,6 +105,7 @@ export function computeLayout(): Layout {
     tree,
     rocks: [rockA, rockB],
     hut,
-    plot: { ...hut },
+    quarry,
+    plot,
   };
 }
