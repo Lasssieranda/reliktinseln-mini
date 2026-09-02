@@ -1,12 +1,13 @@
 import type { GameState } from './state';
-import { canBuildHut, canBuildQuarry, canBuildShrine, canFeedShrine, canUpgradeHut } from './economy';
-import { HUT_RECT, computeLayout, type Layout, type Rect } from './layers';
+import { canBuildHut, canBuildQuarry, canBuildShrine, canFeedShrine, canUpgradeHut, canUpgradeQuarry } from './economy';
+import { HUT_RECT, QUARRY_RECT, computeLayout, type Layout, type Rect } from './layers';
 import {
   FLASH_MS,
   appearScale,
   floatProgress,
   hutVisualScale,
   islandSettleY,
+  quarryVisualScale,
   relicAppearScale,
   relicBeatEnvelope,
   relicIdleAlpha,
@@ -39,6 +40,8 @@ export type SceneFx = {
   islandSettle: TimedFx | null;
   shrineBuild: TimedFx | null;
   relicBeat: TimedFx | null;
+  relic2Beat: TimedFx | null;
+  quarryPulse: TimedFx | null;
   timeMs: number;
 };
 
@@ -354,6 +357,7 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, hutLe
   const cx = rect.x + rect.w / 2;
   const baseY = rect.y + rect.h;
   const tier2 = hutLevel >= 2;
+  const tier3 = hutLevel >= 3;
 
   ctx.save();
   ctx.translate(cx, baseY);
@@ -450,12 +454,46 @@ function drawHut(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, hutLe
     ctx.stroke();
   }
 
+  if (tier3) {
+    const gablePeakY = rect.y - 10;
+    const gableWallY = wallY + 2;
+    ctx.fillStyle = '#7A3426';
+    ctx.beginPath();
+    ctx.moveTo(cx - rect.w * 0.22, gableWallY);
+    ctx.lineTo(cx, gablePeakY);
+    ctx.lineTo(cx + rect.w * 0.22, gableWallY);
+    ctx.lineTo(cx + rect.w * 0.16, gableWallY + 8);
+    ctx.lineTo(cx, gablePeakY + 10);
+    ctx.lineTo(cx - rect.w * 0.16, gableWallY + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#9A4A36';
+    ctx.beginPath();
+    ctx.moveTo(cx - rect.w * 0.16, gableWallY);
+    ctx.lineTo(cx, gablePeakY + 2);
+    ctx.lineTo(cx, gablePeakY + 10);
+    ctx.lineTo(cx - rect.w * 0.1, gableWallY + 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#8EC4D4';
+    roundRect(ctx, cx - 6, gableWallY - 14, 12, 10, 1.5);
+    ctx.fill();
+    ctx.strokeStyle = '#5C3A28';
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+    ctx.fillStyle = '#6A6A68';
+    roundRect(ctx, rect.x + rect.w * 0.18, rect.y + 2, 7, 14, 1);
+    ctx.fill();
+  }
+
   ctx.restore();
 }
 
-function drawQuarry(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): void {
+function drawQuarry(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, quarryLevel: number): void {
   const cx = rect.x + rect.w / 2;
   const baseY = rect.y + rect.h;
+  const tier2 = quarryLevel >= 2;
+  const tier3 = quarryLevel >= 3;
 
   ctx.save();
   ctx.translate(cx, baseY);
@@ -575,6 +613,67 @@ function drawQuarry(ctx: CanvasRenderingContext2D, rect: Rect, scale: number): v
   ctx.lineTo(rect.x + rect.w * 0.36, platY + 10);
   ctx.closePath();
   ctx.fill();
+
+  if (tier2) {
+    ctx.fillStyle = '#7A7A72';
+    ctx.beginPath();
+    ctx.moveTo(rect.x + rect.w * 0.58, platY + 6);
+    ctx.lineTo(rect.x + rect.w * 0.66, platY - 12);
+    ctx.lineTo(rect.x + rect.w * 0.8, platY - 6);
+    ctx.lineTo(rect.x + rect.w * 0.76, platY + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#8A8A82';
+    ctx.beginPath();
+    ctx.moveTo(rect.x + rect.w * 0.7, platY + 4);
+    ctx.lineTo(rect.x + rect.w * 0.78, platY - 10);
+    ctx.lineTo(rect.x + rect.w * 0.9, platY - 2);
+    ctx.lineTo(rect.x + rect.w * 0.84, platY + 12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = woodLight;
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(leftX - 4, beamY - 8);
+    ctx.lineTo(rightX + 4, beamY - 8);
+    ctx.stroke();
+  }
+
+  if (tier3) {
+    const mastX = rightX + 6;
+    const mastTop = rect.y - 8;
+    const jibEnd = rect.x + rect.w * 0.16;
+    ctx.strokeStyle = '#4A4A48';
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(mastX, footY - 4);
+    ctx.lineTo(mastX, mastTop);
+    ctx.stroke();
+    ctx.strokeStyle = '#6A6A66';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(mastX, mastTop + 4);
+    ctx.lineTo(jibEnd, mastTop + 14);
+    ctx.stroke();
+    ctx.strokeStyle = '#8A8A84';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(jibEnd, mastTop + 14);
+    ctx.lineTo(jibEnd, platY - 8);
+    ctx.stroke();
+    ctx.fillStyle = '#5C5C56';
+    ctx.beginPath();
+    ctx.moveTo(jibEnd - 4, platY - 8);
+    ctx.lineTo(jibEnd + 4, platY - 8);
+    ctx.lineTo(jibEnd + 2, platY - 2);
+    ctx.lineTo(jibEnd - 2, platY - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#4A4A48';
+    roundRect(ctx, mastX - 4, mastTop - 2, 8, 6, 1);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -739,6 +838,39 @@ function drawRelic(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, alp
   ctx.restore();
 }
 
+function drawRelic2(ctx: CanvasRenderingContext2D, rect: Rect, scale: number, alpha: number): void {
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha;
+
+  const r = 11;
+  ctx.fillStyle = '#C45C6A';
+  ctx.beginPath();
+  ctx.arc(-r * 0.55, -r * 0.18, r, 0, Math.PI * 2);
+  ctx.arc(r * 0.55, -r * 0.18, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-r * 1.52, -r * 0.05);
+  ctx.lineTo(r * 1.52, -r * 0.05);
+  ctx.lineTo(0, r * 1.72);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#E08A92';
+  ctx.beginPath();
+  ctx.arc(-r * 0.55, -r * 0.22, r * 0.62, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#F4C8CC';
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.72, -r * 0.42, r * 0.28, r * 0.18, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 function drawFloatTexts(ctx: CanvasRenderingContext2D, floats: FloatText[]): void {
   ctx.font = '700 16px system-ui, sans-serif';
   ctx.textAlign = 'center';
@@ -767,7 +899,7 @@ export function drawScene(
 ): void {
   const { canvasW, canvasH, scale, ox, oy } = view;
 
-  const cool = relicBeatEnvelope(fx.relicBeat);
+  const cool = Math.max(relicBeatEnvelope(fx.relicBeat), relicBeatEnvelope(fx.relic2Beat));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, canvasW, canvasH);
   drawSkyBleed(ctx, canvasW, canvasH, cool);
@@ -784,13 +916,20 @@ export function drawScene(
   if (relicScale > 0 && state.shrineBuilt && state.relic1) {
     drawRelic(ctx, layout.relic, relicScale, relicIdleAlpha(fx.timeMs));
   }
+  const relic2Scale = relicAppearScale(fx.relic2Beat, state.relic2);
+  if (relic2Scale > 0 && state.relic2) {
+    drawRelic2(ctx, layout.relic2, relic2Scale, relicIdleAlpha(fx.timeMs + 180));
+  }
 
   const hutScale = hutVisualScale(state.hutLevel, fx.hutBuild, fx.hutPulse);
   const showHutPlot = state.hutLevel === 0 && canBuildHut(state);
   const showQuarryPlot = state.hutLevel >= 1 && state.quarryLevel === 0 && canBuildQuarry(state);
-  const showUpgradePlot = state.hutLevel === 1 && state.quarryLevel >= 1 && canUpgradeHut(state);
+  const showHutL2Plot = state.hutLevel === 1 && canUpgradeHut(state);
+  const showHutL3Plot = state.hutLevel === 2 && canUpgradeHut(state);
+  const showQuarryL2Plot = state.quarryLevel === 1 && canUpgradeQuarry(state);
+  const showQuarryL3Plot = state.quarryLevel === 2 && canUpgradeQuarry(state);
   const showShrinePlot = !state.shrineBuilt && canBuildShrine(state);
-  const showFeedPlot = state.shrineBuilt && !state.relic1 && canFeedShrine(state);
+  const showFeedPlot = canFeedShrine(state);
 
   if (showHutPlot) {
     drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Hütte');
@@ -798,16 +937,25 @@ export function drawScene(
   if (state.hutLevel >= 1 && hutScale > 0) {
     drawHut(ctx, HUT_RECT, hutScale, state.hutLevel);
   }
-  if (showUpgradePlot) {
+  if (showHutL2Plot) {
     drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Stufe 2', true);
   }
+  if (showHutL3Plot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Stufe 3', true);
+  }
 
-  const quarryScale = appearScale(fx.quarryBuild, state.quarryLevel >= 1);
+  const quarryScale = quarryVisualScale(state.quarryLevel, fx.quarryBuild, fx.quarryPulse);
   if (showQuarryPlot) {
     drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Steinbruch');
   }
   if (state.quarryLevel >= 1 && quarryScale > 0) {
-    drawQuarry(ctx, layout.quarry, quarryScale);
+    drawQuarry(ctx, QUARRY_RECT, quarryScale, state.quarryLevel);
+  }
+  if (showQuarryL2Plot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Stufe 2', true);
+  }
+  if (showQuarryL3Plot) {
+    drawPlot(ctx, layout.plot, fx.plotPulse, fx.flash?.kind === 'plot', 'Stufe 3', true);
   }
 
   const shrineScale = appearScale(fx.shrineBuild, state.shrineBuilt);

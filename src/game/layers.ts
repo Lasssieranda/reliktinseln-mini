@@ -1,4 +1,4 @@
-import { HUT_L2_DRAW_SCALE } from './fx';
+import { HUT_L2_DRAW_SCALE, HUT_L3_DRAW_SCALE, QUARRY_L2_DRAW_SCALE, QUARRY_L3_DRAW_SCALE } from './fx';
 import { STAGE_H, STAGE_W } from './view';
 
 export type Rect = {
@@ -19,6 +19,7 @@ export const HUT_RECT: Rect = { x: 146, y: 346, w: 90, h: 80 };
 export const QUARRY_RECT: Rect = { x: 214, y: 438, w: 88, h: 70 };
 export const SHRINE_RECT: Rect = { x: 78, y: 468, w: 84, h: 72 };
 export const RELIC_RECT: Rect = { x: 172, y: 292, w: 52, h: 52 };
+export const RELIC2_RECT: Rect = { x: 220, y: 300, w: 52, h: 52 };
 
 export type Layout = {
   width: number;
@@ -31,6 +32,7 @@ export type Layout = {
   quarry: Rect;
   shrine: Rect;
   relic: Rect;
+  relic2: Rect;
   plot: Rect;
 };
 
@@ -50,18 +52,30 @@ export function scaleRectAroundCenter(rect: Rect, scale: number): Rect {
 }
 
 export function hutHitRect(hutLevel: number): Rect {
+  if (hutLevel >= 3) {
+    return scaleRectAroundCenter(HUT_RECT, HUT_L3_DRAW_SCALE);
+  }
   if (hutLevel >= 2) {
     return scaleRectAroundCenter(HUT_RECT, HUT_L2_DRAW_SCALE);
   }
   return { ...HUT_RECT };
 }
 
-function relicHitRect(): Rect {
-  const min = 48;
-  if (RELIC_RECT.w >= min && RELIC_RECT.h >= min) {
-    return { ...RELIC_RECT };
+export function quarryHitRect(quarryLevel: number): Rect {
+  if (quarryLevel >= 3) {
+    return scaleRectAroundCenter(QUARRY_RECT, QUARRY_L3_DRAW_SCALE);
   }
-  return scaleRectAroundCenter(RELIC_RECT, Math.max(min / RELIC_RECT.w, min / RELIC_RECT.h));
+  if (quarryLevel >= 2) {
+    return scaleRectAroundCenter(QUARRY_RECT, QUARRY_L2_DRAW_SCALE);
+  }
+  return { ...QUARRY_RECT };
+}
+
+function ensureMinHit(rect: Rect, min = 48): Rect {
+  if (rect.w >= min && rect.h >= min) {
+    return { ...rect };
+  }
+  return scaleRectAroundCenter(rect, Math.max(min / rect.w, min / rect.h));
 }
 
 export function computeLayout(opts?: {
@@ -69,6 +83,7 @@ export function computeLayout(opts?: {
   quarryLevel?: number;
   shrineBuilt?: boolean;
   relic1?: boolean;
+  relic2?: boolean;
 }): Layout {
   const width = STAGE_W;
   const height = STAGE_H;
@@ -76,6 +91,7 @@ export function computeLayout(opts?: {
   const quarryLevel = opts?.quarryLevel ?? 0;
   const shrineBuilt = opts?.shrineBuilt ?? false;
   const relic1 = opts?.relic1 ?? false;
+  const relic2 = opts?.relic2 ?? false;
 
   const island: Ellipse = {
     cx: 195,
@@ -105,20 +121,29 @@ export function computeLayout(opts?: {
   };
 
   const hut = hutHitRect(hutLevel);
-  const quarry: Rect = { ...QUARRY_RECT };
+  const quarry = quarryHitRect(quarryLevel);
   const shrine: Rect = { ...SHRINE_RECT };
-  const relic: Rect = relicHitRect();
+  const relic: Rect = ensureMinHit(RELIC_RECT);
+  const relic2Rect: Rect = ensureMinHit(RELIC2_RECT);
 
   let plot: Rect;
   if (hutLevel === 0) {
     plot = { ...HUT_RECT };
   } else if (quarryLevel === 0) {
-    plot = { ...quarry };
+    plot = { ...QUARRY_RECT };
   } else if (hutLevel < 2) {
     plot = hutHitRect(Math.max(hutLevel, 1));
   } else if (!shrineBuilt) {
     plot = { ...shrine };
   } else if (!relic1) {
+    plot = { ...shrine };
+  } else if (quarryLevel < 2) {
+    plot = quarryHitRect(Math.max(quarryLevel, 1));
+  } else if (hutLevel < 3) {
+    plot = hutHitRect(hutLevel);
+  } else if (quarryLevel < 3) {
+    plot = quarryHitRect(quarryLevel);
+  } else if (!relic2) {
     plot = { ...shrine };
   } else {
     plot = hut;
@@ -135,6 +160,7 @@ export function computeLayout(opts?: {
     quarry,
     shrine,
     relic,
+    relic2: relic2Rect,
     plot,
   };
 }

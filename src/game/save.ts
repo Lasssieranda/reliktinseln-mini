@@ -80,7 +80,7 @@ function clampFeeds(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
   }
-  return Math.min(6, Math.max(0, Math.round(value)));
+  return Math.min(14, Math.max(0, Math.round(value)));
 }
 
 export function isSaveBlob(value: unknown): value is SaveBlob {
@@ -171,14 +171,22 @@ function normalizeV3(blob: SaveBlob): GameState {
   let shrineBuilt = blob.shrineBuilt;
   let shrineFeeds = clampFeeds(blob.shrineFeeds);
   let relic1 = blob.relic1;
-  if (relic1 || shrineFeeds >= 6) {
+  let relic2 = blob.relic2;
+  if (relic2 || shrineFeeds >= 14) {
     shrineBuilt = true;
-    shrineFeeds = 6;
+    shrineFeeds = 14;
     relic1 = true;
+    relic2 = true;
+  } else if (relic1 || shrineFeeds >= 6) {
+    shrineBuilt = true;
+    shrineFeeds = Math.max(6, shrineFeeds);
+    relic1 = true;
+    relic2 = false;
   }
   if (!shrineBuilt) {
     shrineFeeds = 0;
     relic1 = false;
+    relic2 = false;
   }
   return {
     wood: blob.wood,
@@ -188,7 +196,7 @@ function normalizeV3(blob: SaveBlob): GameState {
     shrineBuilt,
     shrineFeeds,
     relic1,
-    relic2: blob.relic2,
+    relic2,
   };
 }
 

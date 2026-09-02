@@ -1,4 +1,4 @@
-import { SHRINE_FEEDS_NEEDED } from './economy';
+import { MAX_SHRINE_FEEDS, SHRINE_FEEDS_NEEDED } from './economy';
 import type { GameState } from './state';
 
 /**
@@ -17,4 +17,21 @@ export function skipRelic1(state: GameState): void {
   state.shrineBuilt = true;
   state.shrineFeeds = SHRINE_FEEDS_NEEDED;
   state.relic1 = true;
+}
+
+/**
+ * QA skip for Relikt 2.
+ * Sets relic1+relic2, shrine built, feeds full (14), hutLevel=3 and quarryLevel=3.
+ */
+export function skipRelic2(state: GameState): void {
+  if (state.hutLevel < 3) {
+    state.hutLevel = 3;
+  }
+  if (state.quarryLevel < 3) {
+    state.quarryLevel = 3;
+  }
+  state.shrineBuilt = true;
+  state.shrineFeeds = MAX_SHRINE_FEEDS;
+  state.relic1 = true;
+  state.relic2 = true;
 }

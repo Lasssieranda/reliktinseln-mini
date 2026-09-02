@@ -8,6 +8,7 @@ import {
   canBuildShrine,
   canFeedShrine,
   canUpgradeHut,
+  canUpgradeQuarry,
   createProductionAcc,
   FEED_COST,
   feedShrine,
@@ -15,16 +16,23 @@ import {
   HUT_L1_INTERVAL_MS,
   HUT_L2_COST,
   HUT_L2_INTERVAL_MS,
+  HUT_L3_COST,
+  MAX_SHRINE_FEEDS,
   QUARRY_COST,
   QUARRY_L1_INTERVAL_MS,
+  QUARRY_L2_COST,
+  QUARRY_L3_COST,
+  RELIC2_FEED_COST,
+  RELIC2_FEEDS_NEEDED,
   SHRINE_COST,
   SHRINE_FEEDS_NEEDED,
   tapRock,
   tapTree,
   tickProduction,
   upgradeHut,
+  upgradeQuarry,
 } from './economy';
-import { skipRelic1 } from './qa';
+import { skipRelic1, skipRelic2 } from './qa';
 import { createInitialState } from './state';
 
 describe('economy', () => {
@@ -316,5 +324,200 @@ describe('qa skip', () => {
     expect(canUpgradeHut(state)).toBe(false);
     expect(canBuildShrine(state)).toBe(false);
     expect(canFeedShrine(state)).toBe(false);
+  });
+
+  it('skipRelic2 sets relic1+relic2, feeds 14, hut 3 and quarry 3', () => {
+    const state = createInitialState();
+    skipRelic2(state);
+    expect(state.shrineBuilt).toBe(true);
+    expect(state.shrineFeeds).toBe(14);
+    expect(state.shrineFeeds).toBe(MAX_SHRINE_FEEDS);
+    expect(state.relic1).toBe(true);
+    expect(state.relic2).toBe(true);
+    expect(state.hutLevel).toBe(3);
+    expect(state.quarryLevel).toBe(3);
+    expect(canUpgradeHut(state)).toBe(false);
+    expect(canUpgradeQuarry(state)).toBe(false);
+    expect(canFeedShrine(state)).toBe(false);
+  });
+});
+
+describe('stufe3 upgrades and relic2', () => {
+  it('quarry L2 costs 16/12, hut L3 26/16, quarry L3 22/18; poor cannot', () => {
+    expect(QUARRY_L2_COST).toEqual({ wood: 16, stone: 12 });
+    expect(HUT_L3_COST).toEqual({ wood: 26, stone: 16 });
+    expect(QUARRY_L3_COST).toEqual({ wood: 22, stone: 18 });
+
+    const poorQ2 = createInitialState();
+    poorQ2.hutLevel = 2;
+    poorQ2.quarryLevel = 1;
+    poorQ2.relic1 = true;
+    poorQ2.wood = QUARRY_L2_COST.wood - 1;
+    poorQ2.stone = QUARRY_L2_COST.stone;
+    expect(canUpgradeQuarry(poorQ2)).toBe(false);
+    expect(upgradeQuarry(poorQ2)).toBe(false);
+    expect(poorQ2.quarryLevel).toBe(1);
+
+    const readyQ2 = createInitialState();
+    readyQ2.hutLevel = 2;
+    readyQ2.quarryLevel = 1;
+    readyQ2.relic1 = true;
+    readyQ2.wood = 16;
+    readyQ2.stone = 12;
+    expect(canUpgradeQuarry(readyQ2)).toBe(true);
+    expect(upgradeQuarry(readyQ2)).toBe(true);
+    expect(readyQ2.quarryLevel).toBe(2);
+    expect(readyQ2.wood).toBe(0);
+    expect(readyQ2.stone).toBe(0);
+
+    const noRelic = createInitialState();
+    noRelic.hutLevel = 2;
+    noRelic.quarryLevel = 1;
+    noRelic.wood = 99;
+    noRelic.stone = 99;
+    expect(canUpgradeQuarry(noRelic)).toBe(false);
+    expect(canUpgradeHut(noRelic)).toBe(false);
+
+    const hutBeforeQuarry2 = createInitialState();
+    hutBeforeQuarry2.hutLevel = 2;
+    hutBeforeQuarry2.quarryLevel = 1;
+    hutBeforeQuarry2.relic1 = true;
+    hutBeforeQuarry2.wood = 99;
+    hutBeforeQuarry2.stone = 99;
+    expect(canUpgradeHut(hutBeforeQuarry2)).toBe(false);
+    expect(upgradeHut(hutBeforeQuarry2)).toBe(false);
+    expect(hutBeforeQuarry2.hutLevel).toBe(2);
+
+    const poorH3 = createInitialState();
+    poorH3.hutLevel = 2;
+    poorH3.quarryLevel = 2;
+    poorH3.relic1 = true;
+    poorH3.wood = HUT_L3_COST.wood - 1;
+    poorH3.stone = HUT_L3_COST.stone;
+    expect(canUpgradeHut(poorH3)).toBe(false);
+    expect(upgradeHut(poorH3)).toBe(false);
+
+    const readyH3 = createInitialState();
+    readyH3.hutLevel = 2;
+    readyH3.quarryLevel = 2;
+    readyH3.relic1 = true;
+    readyH3.wood = 26;
+    readyH3.stone = 16;
+    expect(canUpgradeHut(readyH3)).toBe(true);
+    expect(upgradeHut(readyH3)).toBe(true);
+    expect(readyH3.hutLevel).toBe(3);
+    expect(readyH3.wood).toBe(0);
+    expect(readyH3.stone).toBe(0);
+
+    const q3BeforeHut3 = createInitialState();
+    q3BeforeHut3.hutLevel = 2;
+    q3BeforeHut3.quarryLevel = 2;
+    q3BeforeHut3.relic1 = true;
+    q3BeforeHut3.wood = 99;
+    q3BeforeHut3.stone = 99;
+    expect(canUpgradeQuarry(q3BeforeHut3)).toBe(false);
+
+    const poorQ3 = createInitialState();
+    poorQ3.hutLevel = 3;
+    poorQ3.quarryLevel = 2;
+    poorQ3.relic1 = true;
+    poorQ3.wood = QUARRY_L3_COST.wood - 1;
+    poorQ3.stone = QUARRY_L3_COST.stone;
+    expect(canUpgradeQuarry(poorQ3)).toBe(false);
+
+    const readyQ3 = createInitialState();
+    readyQ3.hutLevel = 3;
+    readyQ3.quarryLevel = 2;
+    readyQ3.relic1 = true;
+    readyQ3.wood = 22;
+    readyQ3.stone = 18;
+    expect(canUpgradeQuarry(readyQ3)).toBe(true);
+    expect(upgradeQuarry(readyQ3)).toBe(true);
+    expect(readyQ3.quarryLevel).toBe(3);
+    expect(readyQ3.wood).toBe(0);
+    expect(readyQ3.stone).toBe(0);
+    expect(canUpgradeQuarry(readyQ3)).toBe(false);
+    expect(canUpgradeHut(readyQ3)).toBe(false);
+  });
+
+  it('cannot feed relic2 before stufe3; 8 feeds of 5/4 after relic1 set relic2', () => {
+    expect(RELIC2_FEED_COST).toEqual({ wood: 5, stone: 4 });
+    expect(RELIC2_FEEDS_NEEDED).toBe(8);
+    expect(MAX_SHRINE_FEEDS).toBe(14);
+
+    const early = createInitialState();
+    early.hutLevel = 2;
+    early.quarryLevel = 1;
+    early.shrineBuilt = true;
+    early.shrineFeeds = 6;
+    early.relic1 = true;
+    early.wood = 99;
+    early.stone = 99;
+    expect(canFeedShrine(early)).toBe(false);
+    expect(feedShrine(early)).toBe(false);
+    expect(early.relic2).toBe(false);
+    expect(early.shrineFeeds).toBe(6);
+
+    const hut3only = createInitialState();
+    hut3only.hutLevel = 3;
+    hut3only.quarryLevel = 2;
+    hut3only.shrineBuilt = true;
+    hut3only.shrineFeeds = 6;
+    hut3only.relic1 = true;
+    hut3only.wood = 99;
+    hut3only.stone = 99;
+    expect(canFeedShrine(hut3only)).toBe(false);
+
+    const state = createInitialState();
+    state.hutLevel = 3;
+    state.quarryLevel = 3;
+    state.shrineBuilt = true;
+    state.shrineFeeds = 6;
+    state.relic1 = true;
+    state.wood = RELIC2_FEED_COST.wood * 8;
+    state.stone = RELIC2_FEED_COST.stone * 8;
+    for (let i = 0; i < 7; i += 1) {
+      expect(canFeedShrine(state)).toBe(true);
+      expect(feedShrine(state)).toBe(true);
+      expect(state.shrineFeeds).toBe(7 + i);
+      expect(state.relic2).toBe(false);
+    }
+    expect(feedShrine(state)).toBe(true);
+    expect(state.shrineFeeds).toBe(14);
+    expect(state.relic2).toBe(true);
+    expect(state.wood).toBe(0);
+    expect(state.stone).toBe(0);
+    expect(canFeedShrine(state)).toBe(false);
+    expect(feedShrine(state)).toBe(false);
+  });
+
+  it('inselherz auto ticks grant +1 extra; taps stay 2; no catch-up when paused', () => {
+    const state = createInitialState();
+    state.hutLevel = 3;
+    state.quarryLevel = 3;
+    state.shrineBuilt = true;
+    state.shrineFeeds = 14;
+    state.relic1 = true;
+    state.relic2 = true;
+    tapTree(state);
+    tapRock(state);
+    expect(state.wood).toBe(2);
+    expect(state.stone).toBe(2);
+
+    const acc = createProductionAcc();
+    tickProduction(state, acc, HUT_L2_INTERVAL_MS);
+    expect(state.wood).toBe(4);
+    expect(state.stone).toBe(2);
+    tickProduction(state, acc, QUARRY_L1_INTERVAL_MS - HUT_L2_INTERVAL_MS);
+    expect(state.wood).toBe(4);
+    expect(state.stone).toBe(4);
+
+    const hutMs = acc.hutMs;
+    const quarryMs = acc.quarryMs;
+    tickProduction(state, acc, 20_000, { paused: true });
+    expect(state.wood).toBe(4);
+    expect(state.stone).toBe(4);
+    expect(acc.hutMs).toBe(hutMs);
+    expect(acc.quarryMs).toBe(quarryMs);
   });
 });

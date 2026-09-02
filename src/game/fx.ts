@@ -7,6 +7,10 @@ export const HUT_PULSE_MS = 220;
 export const SETTLE_MS = 340;
 export const FLASH_MS = 120;
 export const HUT_L2_DRAW_SCALE = 1.22;
+export const TIER3_VS_TIER2_SCALE = 1.18;
+export const HUT_L3_DRAW_SCALE = HUT_L2_DRAW_SCALE * TIER3_VS_TIER2_SCALE;
+export const QUARRY_L2_DRAW_SCALE = 1.22;
+export const QUARRY_L3_DRAW_SCALE = QUARRY_L2_DRAW_SCALE * TIER3_VS_TIER2_SCALE;
 export const RELIC_BEAT_MS = 900;
 
 export type SquashFx = {
@@ -51,6 +55,15 @@ export function hutAppearScale(fx: TimedFx | null, hutBuilt: boolean): number {
   return appearScale(fx, hutBuilt);
 }
 
+function pulseScale(from: number, to: number, pulse: TimedFx | null): number {
+  if (!pulse) {
+    return to;
+  }
+  const p = Math.min(1, pulse.elapsed / HUT_PULSE_MS);
+  const overshoot = Math.sin(p * Math.PI) * 0.08;
+  return from + (to - from) * p + overshoot;
+}
+
 export function hutVisualScale(
   hutLevel: number,
   appear: TimedFx | null,
@@ -63,12 +76,28 @@ export function hutVisualScale(
   if (hutLevel === 1) {
     return intro;
   }
-  if (!pulse) {
-    return HUT_L2_DRAW_SCALE;
+  if (hutLevel >= 3) {
+    return pulseScale(HUT_L2_DRAW_SCALE, HUT_L3_DRAW_SCALE, pulse);
   }
-  const p = Math.min(1, pulse.elapsed / HUT_PULSE_MS);
-  const overshoot = Math.sin(p * Math.PI) * 0.08;
-  return 1 + (HUT_L2_DRAW_SCALE - 1) * p + overshoot;
+  return pulseScale(1, HUT_L2_DRAW_SCALE, pulse);
+}
+
+export function quarryVisualScale(
+  quarryLevel: number,
+  appear: TimedFx | null,
+  pulse: TimedFx | null,
+): number {
+  if (quarryLevel < 1) {
+    return 0;
+  }
+  const intro = appearScale(appear, true);
+  if (quarryLevel === 1) {
+    return intro;
+  }
+  if (quarryLevel >= 3) {
+    return pulseScale(QUARRY_L2_DRAW_SCALE, QUARRY_L3_DRAW_SCALE, pulse);
+  }
+  return pulseScale(1, QUARRY_L2_DRAW_SCALE, pulse);
 }
 
 export function islandSettleY(fx: TimedFx | null): number {
